@@ -88,8 +88,8 @@ class Protein_alignment:
         record2 = SeqRecord(Seq(sek2), id="seq2", description="Aligned sequence 2")
         output_path = os.path.join(self.output_dir, f'aligned{file_name}.fasta')
 
-        #SeqIO.write([record1, record2], output_path, "fasta")
-        SeqIO.write([record1, record2], f'aligned{file_name}.fasta', "fasta")
+        SeqIO.write([record1, record2], output_path, "fasta")
+        #SeqIO.write([record1, record2], f'aligned{file_name}.fasta', "fasta")
 
 
 

@@ -4,12 +4,8 @@ from DatabaseTool import *
 from Alignment import *
 
 
-
-
-
-
 def create_tree(fasta_file: str, db_handler: ProteinDatabaseHandlerNCBI,
-                           output_newick="tree.nwk", output_image="tree.png"):
+                           output_newick="tree.nwk", output_image="tree.png", output_dir ='data'):
 
     alignment = ClustalWAlignment(fasta_file)
     newick_str = alignment.neighbor_joining()
@@ -25,5 +21,8 @@ def create_tree(fasta_file: str, db_handler: ProteinDatabaseHandlerNCBI,
     plt.savefig(output_image, bbox_inches='tight')
     plt.close()
 
-    print(f"Tree save in: {output_newick}")
-    print(f"Image save in: {output_image}")
+    output_newick_path = os.path.join(output_dir, output_newick)
+    output_image_path = os.path.join(output_dir, output_image)
+
+    print(f"Tree save in: {output_newick_path}")
+    print(f"Image save in: {output_image_path}")

@@ -8,12 +8,16 @@ from Alignment import *
 
 
 class Model:
-    def __init__(self, filename: str,dataset:str):
+    def __init__(self, filename: str,dataset:str, output_folder:str):
 
-        self.filename = f'aligned{filename}.fasta'
-        self.hmm_profil = f'aligned{filename}.fasta.hmm'
+        self.output_folder = output_folder
+        #self.filename = f'aligned{filename}.fasta'
+        #self.hmm_profil = f'aligned{filename}.fasta.hmm'
+        self.filename = os.path.join(self.output_folder, f'aligned{filename}.fasta')
+        self.hmm_profil = os.path.join(self.output_folder, f'aligned{filename}.fasta.hmm')
         self.dataset = dataset
         self.hmm = None
+
 
     def create_hmm_profil(self):
         alphabet = pyhmmer.easel.Alphabet.amino()
@@ -228,7 +232,7 @@ class Model:
                 break
 
             # save results
-            iter_filename = f"iter_{i + 1}.fasta"
+            iter_filename = os.path.join(self.output_folder,f"iter_{i + 1}.fasta")
             with open(iter_filename, "w") as f:
                 for seq_id, seq in new_seqs:
                     f.write(f">{seq_id}\n{seq}\n")
@@ -237,7 +241,7 @@ class Model:
             clustalw = ClustalWAlignment(iter_filename)
             aligned_sequences = clustalw.align()
 
-            aligned_filename = f"aligned_iter_{i + 1}.fasta"
+            aligned_filename = os.path.join(self.output_folder,f"aligned_iter_{i + 1}.fasta")
             with open(aligned_filename, "w") as f:
                 for seq_id, seq in aligned_sequences.items():
                     f.write(f">{seq_id}\n{seq}\n")
@@ -249,7 +253,7 @@ class Model:
 
         # final
         if combine_output and combined_sequences:
-            final_filename = "final_combined.fasta"
+            final_filename = os.path.join(self.output_folder,"final_combined.fasta")
             with open(final_filename, "w") as out:
                 for seq_id, seq in combined_sequences:
                     out.write(f">{seq_id}\n{seq}\n")
@@ -258,7 +262,7 @@ class Model:
             clustalw = ClustalWAlignment(final_filename)
             aligned_sequences = clustalw.align()
 
-            final_aligned = "aligned_final.fasta"
+            final_aligned = os.path.join(self.output_folder,"aligned_final.fasta")
             with open(final_aligned, "w") as f:
                 for seq_id, seq in aligned_sequences.items():
                     f.write(f">{seq_id}\n{seq}\n")
@@ -286,7 +290,7 @@ class Model:
 
 
             self.filename = original_hmm
-            #self.create_hmm_profil()
+            self.create_hmm_profil()
 
 
             hits = list(itertools.islice(self.hmm_search(), max_sequences * 10))
@@ -315,7 +319,7 @@ class Model:
                 combined_sequences.extend(new_seqs)
 
 
-            with open(f"iter_{i+1}.fasta", "w") as f:
+            with open(os.path.join(self.output_folder,f"iter_{i+1}.fasta"), "w") as f:
                 for seq_id, seq in new_seqs:
                     f.write(f">{seq_id}\n{seq}\n")
 
@@ -328,11 +332,11 @@ class Model:
 
             if i == iterations - 1:
 
-                fasta_filename = f"iter_{i+1}.fasta"
+                fasta_filename = os.path.join(self.output_folder,f"iter_{i+1}.fasta")
                 clustalw = ClustalWAlignment(fasta_filename)
                 aligned_sequences = clustalw.align()
-                save_alignment_to_fasta(aligned_sequences,output_file=fasta_filename)
-                self.filename = f"iter_{i+1}.fasta"
+                clustalw.save_alignment_to_fasta(aligned_sequences,output_file=fasta_filename)
+                self.filename = os.path.join(self.output_folder,f"iter_{i+1}.fasta")
                 self.create_hmm_profil()
 
             if combine_output and combined_sequences:
@@ -340,10 +344,10 @@ class Model:
                     for seq_id, seq in combined_sequences:
                         out.write(f">{seq_id}\n{seq}\n")
 
-        fasta_filename = "all_iters_combined.fasta"
+        fasta_filename = os.path.join(self.output_folder,"all_iters_combined.fasta")
         clustalw = ClustalWAlignment(fasta_filename)
         aligned_sequences = clustalw.align()
-        save_alignment_to_fasta(aligned_sequences,output_file=fasta_filename)
+        clustalw.save_alignment_to_fasta(aligned_sequences,output_file=fasta_filename)
         print("\n All iterations are combined in all_iters_combined.fasta")
 
         print(f"\nFound unique orthologists: {len(found_sequences)}")

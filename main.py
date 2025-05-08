@@ -8,6 +8,7 @@ from vizualization import *
 if __name__ == '__main__':
 
     prot_dir = r'data'
+    os.makedirs(prot_dir, exist_ok=True)
 
     df = pd.DataFrame({
         'Source': ['Cupriavidus necator', 'Caulobacter vibrioides'],
@@ -23,16 +24,20 @@ if __name__ == '__main__':
     alig.GlobalAlignment(file_name='phac_cupr', list_match=[2, 1, -1])
 
     #model
-    model = Model(filename='phac_cupr', dataset='orthodb_phac.fasta')
+    model = Model(filename='phac_cupr', dataset='orthodb_phac.fasta', output_folder=prot_dir)
     #model.create_hmm_profil()
 
-    # Итеративный поиск
-    #model.iterative_search(iterations=2, max_sequences=5)
-    #model.upload_search(iterations=3,max_sequences=10,min_sequences_for_update=2)
-    found_seqs = model.sequential_search(iterations=3, initial_threshold=500)
 
-    #handler = ProteinDatabaseHandlerNCBI(None)
-    #create_tree("all_iters_combined.fasta", db_handler=handler)
+    model.iterative_search(iterations=2, max_sequences=5)
+    #model.upload_search(iterations=3,max_sequences=10,min_sequences_for_update=2)
+
+    #seq seqar
+    found_seqs = model.sequential_search(iterations=2,max_sequences=2, initial_threshold=500,combine_output=True)
+
+    handler = ProteinDatabaseHandlerNCBI(None)
+    create_tree("all_iters_combined.fasta", db_handler=handler)
+    handler = ProteinDatabaseHandlerNCBI(None)
+    create_tree(os.path.join(prot_dir, 'aligned_final.fasta'), handler)
 
 
 
