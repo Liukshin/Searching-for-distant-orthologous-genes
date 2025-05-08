@@ -11,6 +11,10 @@ def create_tree(fasta_file: str, db_handler: ProteinDatabaseHandlerNCBI,
     newick_str = alignment.neighbor_joining()
 
 
+    output_newick = os.path.join(output_dir, output_newick)
+    output_image = os.path.join(output_dir, output_image)
+
+
     with open(output_newick, "w") as f:
         f.write(newick_str)
 
@@ -21,8 +25,6 @@ def create_tree(fasta_file: str, db_handler: ProteinDatabaseHandlerNCBI,
     plt.savefig(output_image, bbox_inches='tight')
     plt.close()
 
-    output_newick_path = os.path.join(output_dir, output_newick)
-    output_image_path = os.path.join(output_dir, output_image)
 
-    print(f"Tree save in: {output_newick_path}")
-    print(f"Image save in: {output_image_path}")
+    print(f"Tree save in: {output_newick}")
+    print(f"Image save in: {output_image}")

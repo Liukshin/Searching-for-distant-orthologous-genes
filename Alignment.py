@@ -198,30 +198,35 @@ class ClustalWAlignment(MultipleAlignment):
 
         return distance_matrix
 
+
     def neighbor_joining(self):
         """Builds a phylogenetic tree using the neighbor-joining algorithm"""
 
         distance_matrix = self.compute_distance_matrix()
         labels = [seq.id for seq in self.sequences]
 
-        # copy the matrix to avoid modifying the original
+        # Copy the matrix to avoid modifying the original
         D = np.array(distance_matrix, dtype=float)
-        clusters = {label: label for label in labels}  # stores subtrees in Newick format
+        clusters = {label: label for label in labels}  # Stores subtrees in Newick format
 
         while len(labels) > 2:
             n = len(D)
 
-            # 1)compute Q matrix
+            # 1. Compute Q matrix
             total_distances = np.sum(D, axis=1)
             Q = (n - 2) * D - total_distances[:, np.newaxis] - total_distances[np.newaxis, :]
             np.fill_diagonal(Q, np.inf)  # Ignore diagonal
 
-            # 2. find pair with minimal Q[i][j]
+            # 2. Find pair with minimal Q[i][j]
             i, j = np.unravel_index(np.argmin(Q), Q.shape)
-            if i == j:  # just in case
+            if i == j:  # Safety check
                 continue
 
-            # 3. Calculate branch lengths for new node
+            # Ensure i < j to handle removal correctly
+            if i > j:
+                i, j = j, i
+
+            # 3. Calculate branch lengths for the new node
             delta = (total_distances[i] - total_distances[j]) / (n - 2)
             limb_i = 0.5 * (D[i, j] + delta)
             limb_j = 0.5 * (D[i, j] - delta)
@@ -231,23 +236,29 @@ class ClustalWAlignment(MultipleAlignment):
             new_label = f"Cluster_{len(labels)}"
             clusters[new_label] = new_cluster
 
-            #5 Update distance matrix
+            # 5. Update the distance matrix
             new_distances = 0.5 * (D[i, :] + D[j, :] - D[i, j])
-            D = np.delete(D, [i, j], axis=0)
-            D = np.delete(D, [i, j], axis=1)
-            D = np.vstack([D, new_distances[:-2]])  # Exclude i and j
-            D = np.column_stack([D, np.append(new_distances[:-2], 0)])
+            new_distances = np.delete(new_distances, [i, j])  # Remove distances for i and j
 
-            #6. update labels list
-            labels.pop(j)  # Remove j first since i < j
-            labels.pop(i)
-            labels.append(new_label)
+            # Remove rows and columns from D
+            D = np.delete(D, [j, i], axis=0)
+            D = np.delete(D, [j, i], axis=1)
 
-        # 7. connect the last two nodes
+            # Append the new distances to D
+            D = np.vstack([D, new_distances])
+            new_distances = np.append(new_distances, 0.0)  # Distance to itself is 0
+            D = np.column_stack([D, new_distances])
+
+            # 6. Update labels list
+            labels.pop(j)  # Remove the larger index first
+            labels.pop(i)  # Then the smaller index
+            labels.append(new_label)  # Add the new cluster label
+
+        # 7. Connect the last two nodes
         if len(labels) == 2:
             tree = f"({clusters[labels[0]]}:{D[0, 1] / 2:.3f}, {clusters[labels[1]]}:{D[0, 1] / 2:.3f})"
         else:
-            tree = clusters[labels[0]]  # if only 1 node remains (edge case)
+            tree = clusters[labels[0]]  # Edge case with only one node left
 
         return tree
 
@@ -362,11 +373,11 @@ class ClustalWAlignment(MultipleAlignment):
         return aligned_result
 
 
-    def save_alignment_to_fasta(alignment, headers=False, output_file="alignment_result.fasta"):
+    def save_alignment_to_fasta(self,alignment_seq, headers=False, output_file="alignment_result.fasta"):
         """Saves alignment to FASTA file"""
 
         records = []
-        for seq_id, aligned_seq in alignment.items():
+        for seq_id, aligned_seq in alignment_seq.items():
             if headers:
                 record = SeqRecord(Seq(aligned_seq),
                                    id=seq_id,
@@ -379,5 +390,5 @@ class ClustalWAlignment(MultipleAlignment):
         with open(output_file, "w") as handle:
             SeqIO.write(records, handle, "fasta")
 
-        print(f"✓ Alignment saved to {os.path.abspath(output_file)}")
+        print(f"Alignment saved to {os.path.abspath(output_file)}")
         return output_file
