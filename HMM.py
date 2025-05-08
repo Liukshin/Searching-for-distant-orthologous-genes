@@ -1,0 +1,349 @@
+import pyhmmer
+import os
+import shutil
+import itertools
+from Alignment import *
+
+
+
+
+class Model:
+    def __init__(self, filename: str,dataset:str):
+
+        self.filename = f'aligned{filename}.fasta'
+        self.hmm_profil = f'aligned{filename}.fasta.hmm'
+        self.dataset = dataset
+        self.hmm = None
+
+    def create_hmm_profil(self):
+        alphabet = pyhmmer.easel.Alphabet.amino()
+        with pyhmmer.easel.MSAFile(self.filename, digital=True, alphabet=alphabet) as msa_file:
+            msa = msa_file.read()
+            msa.name = b"My_HMM"
+            builder = pyhmmer.plan7.Builder(alphabet)
+            background = pyhmmer.plan7.Background(alphabet)
+            self.hmm, _, _ = builder.build_msa(msa, background)
+            with open(f"{self.filename}.hmm", "wb") as hmm_file:
+                self.hmm.write(hmm_file)
+
+
+    def hmm_search(self)->pyhmmer.plan7.TopHits:
+        with pyhmmer.plan7.HMMFile(self.hmm_profil) as hmm_file:
+            hmm = hmm_file.read()
+
+        with pyhmmer.easel.SequenceFile(self.dataset, digital=True) as seq_file:
+            sequences = seq_file.read_block()
+
+        pipeline = pyhmmer.plan7.Pipeline(hmm.alphabet)
+        hits = pipeline.search_hmm(hmm, sequences)
+        return hits
+
+
+
+
+
+    def viterbi(self, sequence):
+        """
+        algorithm viterbi for HMM.
+
+        :param sequence: Input sequence.
+        :return: Most probable sequence of states.
+
+        """
+
+        alphabet = pyhmmer.easel.Alphabet.amino()
+
+        if self.hmm is None:
+            raise ValueError("The HMM model is not loaded. First call create_hmm_profil().")
+
+        num_states = self.hmm.M  # numbers of state Match
+        seq_len = len(sequence)
+
+        # Table initialization
+        viterbi = np.zeros((num_states, seq_len))
+        #viterbi = np.full((num_states, seq_len), -np.inf)
+        backpointer = np.zeros((num_states, seq_len), dtype=int)
+
+        symbol = sequence[0]
+        valid_states = np.arange(num_states)
+
+        if symbol == "-":
+            viterbi[:, 0] = ([self.hmm.transition_probabilities[state, 5] for state in range(num_states)])  # d->m
+        else:
+            symbol_index = int(alphabet.encode(symbol)[0])
+            if symbol_index >= 20:
+                print(f"Incorrect symbol {symbol}, index {symbol_index} out of range. Skip symbol {symbol}.")
+                return  # skip the current sequence
+            trans_prob =np.array([self.hmm.transition_probabilities[state, 0] for state in range(num_states)])
+            match_prob = np.array([self.hmm.match_emissions[state, symbol_index] for state in range(num_states)])# m->m
+            viterbi[:, 0] = (trans_prob + match_prob)
+
+
+        for t in range(1, seq_len):
+            symbol = sequence[t]
+
+            if symbol != "-":
+                symbol_index = alphabet.encode(symbol)[0]
+                if symbol_index >= 20:
+                    print(f"Incorrect symbol {symbol}, index {symbol_index} out of range. Skip symbol {symbol}.")
+                    continue  # skip symbol and continue
+                emission_probs = np.array([self.hmm.match_emissions[state, symbol_index] for state in range(num_states)])
+            else:
+                emission_probs = np.zeros(num_states)  # gap (-)
+
+            # transitions
+            transition_probs = np.array([self.hmm.transition_probabilities[state, 0]for state in range(num_states)])  # m->m по умолчанию
+            transition_probs[symbol == "-"] = np.array([self.hmm.transition_probabilities[state, 6]for state in range(num_states)])  # d->d для '-'
+
+            # vectorized update
+            viterbi[:, t] = np.max(viterbi[:, t - 1][:, np.newaxis] + (transition_probs) + (emission_probs), axis=0)
+            backpointer[:, t] = np.argmax(viterbi[:, t - 1][:, np.newaxis] + np.array(transition_probs) + np.array(emission_probs), axis=0)
+        best_path_prob = np.nan  # start with none value
+        best_last_state = 0
+
+        # seqrch max prob in the last colmn  viterbi
+        for state in range(num_states):
+            if np.isnan(best_path_prob) or viterbi[state, seq_len - 1] > best_path_prob:
+                best_path_prob = viterbi[state, seq_len - 1]
+                best_last_state = state
+
+        # if the best prob= -∞ , its mistake
+        if np.isnan(best_path_prob):
+            print("Error: All stats have -∞ probability in the last column Viterbi.")
+            return [], -1  #  return emty arr and -1 for prob
+
+        # path restoration
+        best_path = [best_last_state]
+        for t in range(seq_len - 1, 0, -1):
+            best_last_state = backpointer[best_last_state, t]
+            best_path.insert(0, best_last_state)
+
+        return best_path, best_path_prob
+
+
+
+
+
+
+
+
+
+    def _get_hit_identifier(self, hit, hit_idx):
+
+
+        if hit.accession is not None:
+            return hit.accession.decode('utf-8', errors='replace')
+        # if hit.name is not None:
+        #     return hit.name.decode('utf-8', errors='replace')
+        # if hit.description is not None:
+        #     desc = hit.description.decode('utf-8', errors='replace')
+        #     return desc.split()[0] if desc else f"hit_{hit_idx}"
+        # return f"hit_{hit_idx}"
+
+    def _save_sequences_to_fasta(self, sequence_data, filename):
+
+        #cringe func
+        with open(filename, "w") as f:
+            for seq_id, seq in sequence_data:
+
+                clean_id = "".join(c if c.isalnum() or c in "_:|-" else "_" for c in seq_id)
+                f.write(f">{clean_id}\n{seq}\n")
+        print(f"\nsave {len(sequence_data)} seq in {filename}")
+
+    def _process_alignment(self, fasta_filename):
+        try:
+            # alogn
+            clustalw = ClustalWAlignment(fasta_filename)
+            aligned_sequences = clustalw.align()
+
+            # save align seq
+            aligned_filename = f"aligned_{fasta_filename}"
+
+            with open(aligned_filename, "w") as f:
+                for seq_id, seq in aligned_sequences.items():
+                    f.write(f">{seq_id}\n{seq}\n")
+
+
+            self.filename = aligned_filename
+            self.create_hmm_profil()
+            print(f"Model upload with {aligned_filename}")
+
+        except Exception as e:
+            print(f"Error with seq: {str(e)}")
+            raise
+
+
+
+    def sequential_search(self, iterations=5, initial_threshold=800, max_sequences=10, combine_output=True):
+        """
+        Sequential search, where each successive iteration uses a model,
+        created from the results of the previous iteration.
+
+        Logic:
+        1. iteration 1: Search with the initial model (M0) → create M1
+        2. iteration 2: Search with M1 → create M2
+        3. iteration 3: Search with M2 → create M3.
+        ...
+        """
+        found_sequences = []
+        combined_sequences = []
+        current_model = self.filename  # start with model (М0)
+
+        for i in range(iterations):
+            print(f"\n=== Iteration {i + 1}/{iterations} (model: {current_model}) ===")
+
+            # load model
+            self.filename = current_model
+            self.create_hmm_profil()
+
+            # search
+            hits = list(itertools.islice(self.hmm_search(), max_sequences * 10))
+            new_seqs = []
+
+            for hit in hits:
+                try:
+                    seq_id = hit.name.decode()
+                except:
+                    continue
+
+                if seq_id in found_sequences:
+                    continue
+
+                seq = str(hit.domains[0].alignment.target_sequence)
+                _, prob = self.viterbi(seq)
+
+                if prob is None:
+                    continue
+
+                current_threshold = initial_threshold * (0.7 ** i)
+                if prob >= current_threshold:
+                    new_seqs.append((seq_id, seq))
+                    found_sequences.append(seq_id)
+                    print(f"Find: {seq_id} (p={prob:.2f}, threshold={current_threshold:.2f})")
+                    if len(new_seqs) >= max_sequences:
+                        break
+
+            if not new_seqs:
+                print("No new sequences found. End the search.")
+                break
+
+            # save results
+            iter_filename = f"iter_{i + 1}.fasta"
+            with open(iter_filename, "w") as f:
+                for seq_id, seq in new_seqs:
+                    f.write(f">{seq_id}\n{seq}\n")
+
+            # alignmetn and create new model for next iteration
+            clustalw = ClustalWAlignment(iter_filename)
+            aligned_sequences = clustalw.align()
+
+            aligned_filename = f"aligned_iter_{i + 1}.fasta"
+            with open(aligned_filename, "w") as f:
+                for seq_id, seq in aligned_sequences.items():
+                    f.write(f">{seq_id}\n{seq}\n")
+
+            current_model = aligned_filename  # upload model for next iteration
+
+            if combine_output:
+                combined_sequences.extend(new_seqs)
+
+        # final
+        if combine_output and combined_sequences:
+            final_filename = "final_combined.fasta"
+            with open(final_filename, "w") as out:
+                for seq_id, seq in combined_sequences:
+                    out.write(f">{seq_id}\n{seq}\n")
+
+            # create final model
+            clustalw = ClustalWAlignment(final_filename)
+            aligned_sequences = clustalw.align()
+
+            final_aligned = "aligned_final.fasta"
+            with open(final_aligned, "w") as f:
+                for seq_id, seq in aligned_sequences.items():
+                    f.write(f">{seq_id}\n{seq}\n")
+
+            self.filename = final_aligned
+            self.create_hmm_profil()
+            print(f"\n final model: {final_aligned}")
+
+        print(f"Total unique sequences found: {len(found_sequences)}")
+        return found_sequences
+
+
+
+
+    def iterative_search(self, iterations=5, initial_threshold=800, max_sequences=10,combine_output=True):
+        """
+        Simplified iterative search with full model reset between iterations
+        """
+        original_hmm = self.filename
+        found_sequences = []
+        combined_sequences = []
+
+        for i in range(iterations):
+            print(f"\n=== iteration {i+1}/{iterations} ===")
+
+
+            self.filename = original_hmm
+            #self.create_hmm_profil()
+
+
+            hits = list(itertools.islice(self.hmm_search(), max_sequences * 10))
+            new_seqs = []
+
+            for hit in hits:
+                seq_id = hit.name.decode()
+                if seq_id in found_sequences:
+                    continue
+
+                seq = str(hit.domains[0].alignment.target_sequence)
+                _, prob = self.viterbi(seq)
+
+                if prob >= initial_threshold * (0.5 ** i):
+                    new_seqs.append((seq_id, seq))
+                    found_sequences.append(seq_id)
+                    print(f"Find: {seq_id} (prob: {prob:.2f})")
+                    if len(new_seqs) >= max_sequences:
+                        break
+
+            if not new_seqs:
+                print("No sequences were found. Skip the iteration.")
+                continue
+
+            if combine_output:
+                combined_sequences.extend(new_seqs)
+
+
+            with open(f"iter_{i+1}.fasta", "w") as f:
+                for seq_id, seq in new_seqs:
+                    f.write(f">{seq_id}\n{seq}\n")
+
+            #aligment
+            # fasta_filename = f"iter_{i+1}.fasta"
+            # clustalw = ClustalWAlignment(fasta_filename)
+            # aligned_sequences = clustalw.align()
+            # save_alignment_to_fasta(aligned_sequences,output_file=fasta_filename)
+
+
+            if i == iterations - 1:
+
+                fasta_filename = f"iter_{i+1}.fasta"
+                clustalw = ClustalWAlignment(fasta_filename)
+                aligned_sequences = clustalw.align()
+                save_alignment_to_fasta(aligned_sequences,output_file=fasta_filename)
+                self.filename = f"iter_{i+1}.fasta"
+                self.create_hmm_profil()
+
+            if combine_output and combined_sequences:
+                with open("all_iters_combined.fasta", "w") as out:
+                    for seq_id, seq in combined_sequences:
+                        out.write(f">{seq_id}\n{seq}\n")
+
+        fasta_filename = "all_iters_combined.fasta"
+        clustalw = ClustalWAlignment(fasta_filename)
+        aligned_sequences = clustalw.align()
+        save_alignment_to_fasta(aligned_sequences,output_file=fasta_filename)
+        print("\n All iterations are combined in all_iters_combined.fasta")
+
+        print(f"\nFound unique orthologists: {len(found_sequences)}")
