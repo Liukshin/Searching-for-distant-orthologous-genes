@@ -110,14 +110,10 @@ def plot_hits(all_hits, output_dir='data', name_graph = "all_iterations.png"):
     plt.style.use('seaborn-v0_8')
     plt.figure(figsize=(10, 6), dpi=300)
 
-    # Create a colormap with enough colors for all iterations
     colors = plt.cm.viridis(np.linspace(0, 1, len(all_hits)))
 
     for iteration, hits in all_hits.items():
-        # Extract scores from Hit objects
         scores = [hit.score for hit in hits]
-
-        # Create x-axis positions (1, 2, 3, ...)
         x_values = range(1, len(scores) + 1)
 
         plt.plot(
@@ -131,21 +127,16 @@ def plot_hits(all_hits, output_dir='data', name_graph = "all_iterations.png"):
             color=colors[iteration]
         )
 
-    # Customize the plot
     plt.legend(frameon=True, framealpha=0.8, edgecolor='gray')
     plt.xlabel("Hit Position", fontsize=12)
     plt.ylabel("Bit Score", fontsize=12)
     plt.title("HMMER Hit Scores Across Iterations", fontsize=14)
 
-    # Adjust spines and grid
     for spine in plt.gca().spines.values():
         spine.set_linewidth(0.5)
     plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)
 
-    # Ensure output directory exists
-    #os.makedirs(output_dir, exist_ok=True)
 
-    # Save and show
     plt.savefig(os.path.join(output_dir, name_graph), bbox_inches='tight', dpi=300)
     plt.show()
 
