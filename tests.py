@@ -21,7 +21,7 @@ dataset = os.path.join(prot_dir, 'orthodb_phac.fasta')
 # hits_v = model.iterative_search(iterations=2, max_sequences=5)
 #
 #
-# # Строим дерево
+# 
 # tree = create_colored_tree(hits_v)
 #
 #
