@@ -5,6 +5,9 @@ from Bio.SeqRecord import SeqRecord
 import os
 import requests
 import orthodb
+from Bio.Seq import Seq
+import json
+
 
 
 
@@ -16,18 +19,18 @@ class ProteinDatabaseHandlerNCBI:
         self.prot_dict = {}
 
 
-    def protein_search(self,email:str,errors = True):
+    def protein_search(self,email:str,errors = True, database = "protein" ):
         Entrez.email = email
         info_dict = self.prot_dict
         protein = self.protein_name
         for i in range(np.shape(protein)[0]):
-            handle = Entrez.esearch(db="protein", term=protein['Source'][i] + ' ' + protein['Gene'][i], retmax=10)
+            handle = Entrez.esearch(db= database, term=protein['Source'][i] + ' ' + protein['Gene'][i], retmax=10)
             record = Entrez.read(handle)
             if errors:
                 if len(record['IdList']) > 0:
                     info_dict[str(protein['Source'][i])] = record['IdList'][0]
                 else:
-                    raise ValueError(f"{protein['Source'][i]} is not found in NCBI GenBank")
+                    raise ValueError(f"{protein['Source'][i]} is not found in NCBI {database}")
 
             else:
                 info_dict[str(protein['Source'][i])] = record['IdList'][0] if len(record['IdList']) > 0 else 'not Found'
@@ -77,6 +80,7 @@ class ProteinDatabaseHandlerNCBI:
 
 
 
+
 def download_orthodb_fasta(gene_name: str, output_file: str = "orthologs.fasta", output_dir: str = "./fasta_results"):
     """
     Uses the official OrthoDB Python package to fetch all orthologs of a gene and save them as a FASTA file.
@@ -120,4 +124,41 @@ def download_orthodb_fasta(gene_name: str, output_file: str = "orthologs.fasta",
         f.write(fasta_data)
 
     print(f"All FASTA sequences saved to {full_path}")
+
+
+def get_organism_sequences(hits, threshold=0.01, max_sequences=100, output_file="hmm_search_results.fasta"):
+    hit_sequences = []
+    unique_names = set()
+    organism_names = []
+    sequence_count = 0
+
+    for hit in hits:
+        if sequence_count >= max_sequences or hit.evalue > threshold:
+            break
+
+        hit_description = json.loads(hit.description.decode())
+        organism_name = hit_description.get("organism_name", "Unknown organism")
+        hit_name = hit.name.decode()
+
+        if hit_name not in unique_names:
+            unique_names.add(hit_name)
+            organism_names.append(organism_name)
+
+            for domain in hit.domains:
+                seq_record = SeqRecord(
+                    Seq(str(domain.alignment.target_sequence)),
+                    id=hit_name,
+                    description=f"{organism_name} | evalue={hit.evalue:.2g}"
+                )
+                hit_sequences.append(seq_record)
+                sequence_count += 1
+                break
+
+    if output_file:
+        SeqIO.write(hit_sequences, output_file, "fasta")
+
+    return hit_sequences
+
+
+
 

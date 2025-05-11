@@ -1,3 +1,4 @@
+import os.path
 from DatabaseTool import *
 from Alignment import *
 from HMM import *
@@ -24,20 +25,22 @@ if __name__ == '__main__':
     alig.GlobalAlignment(file_name='phac_cupr', list_match=[2, 1, -1])
 
     #model
-    model = Model(filename='phac_cupr', dataset='orthodb_phac.fasta', output_folder=prot_dir)
+    dataset = os.path.join(prot_dir, 'orthodb_phac.fasta')
+    model = Model(filename='phac_cupr', dataset= dataset, output_folder=prot_dir)
     #model.create_hmm_profil()
 
 
-    model.iterative_search(iterations=2, max_sequences=5)
+    #model.iterative_search(iterations=2, max_sequences=5)
     #model.upload_search(iterations=3,max_sequences=10,min_sequences_for_update=2)
 
     #seq seqar
-    found_seqs = model.sequential_search(iterations=2,max_sequences=2, initial_threshold=500,combine_output=True)
+    found_seqs = model.sequential_search(iterations=5,max_sequences=20, initial_threshold=500,combine_output=True)
 
-    handler = ProteinDatabaseHandlerNCBI(None)
-    create_tree("all_iters_combined.fasta", db_handler=handler)
-    handler = ProteinDatabaseHandlerNCBI(None)
-    create_tree(os.path.join(prot_dir, 'aligned_final.fasta'), handler)
+    test_fasta = os.path.join(prot_dir, 'aligned_final.fasta')
+    df = create_table(test_fasta, dataset)
+
+    update_fasta_from_df(test_fasta,df)
+    create_tree(test_fasta)
 
 
 
