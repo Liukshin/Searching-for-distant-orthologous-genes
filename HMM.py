@@ -127,57 +127,6 @@ class Model:
 
 
 
-
-
-
-
-
-    def _get_hit_identifier(self, hit, hit_idx):
-
-
-        if hit.accession is not None:
-            return hit.accession.decode('utf-8', errors='replace')
-        # if hit.name is not None:
-        #     return hit.name.decode('utf-8', errors='replace')
-        # if hit.description is not None:
-        #     desc = hit.description.decode('utf-8', errors='replace')
-        #     return desc.split()[0] if desc else f"hit_{hit_idx}"
-        # return f"hit_{hit_idx}"
-
-    def _save_sequences_to_fasta(self, sequence_data, filename):
-
-        #cringe func
-        with open(filename, "w") as f:
-            for seq_id, seq in sequence_data:
-
-                clean_id = "".join(c if c.isalnum() or c in "_:|-" else "_" for c in seq_id)
-                f.write(f">{clean_id}\n{seq}\n")
-        print(f"\nsave {len(sequence_data)} seq in {filename}")
-
-    def _process_alignment(self, fasta_filename):
-        try:
-            # alogn
-            clustalw = ClustalWAlignment(fasta_filename)
-            aligned_sequences = clustalw.align()
-
-            # save align seq
-            aligned_filename = f"aligned_{fasta_filename}"
-
-            with open(aligned_filename, "w") as f:
-                for seq_id, seq in aligned_sequences.items():
-                    f.write(f">{seq_id}\n{seq}\n")
-
-
-            self.filename = aligned_filename
-            self.create_hmm_profil()
-            print(f"Model upload with {aligned_filename}")
-
-        except Exception as e:
-            print(f"Error with seq: {str(e)}")
-            raise
-
-
-
     def sequential_search(self, iterations=5, initial_threshold=800, max_sequences=10, combine_output=True):
         """
         Sequential search, where each successive iteration uses a model,
@@ -232,7 +181,7 @@ class Model:
                 print("No new sequences found. End the search.")
                 break
 
-            # save results
+           
             iter_filename = os.path.join(self.output_folder,f"iter_{i + 1}.fasta")
             with open(iter_filename, "w") as f:
                 for seq_id, seq in new_seqs:
