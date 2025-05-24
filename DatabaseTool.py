@@ -7,8 +7,9 @@ import requests
 import orthodb
 from Bio.Seq import Seq
 import json
-
-
+from orthodb import OdbAPI
+import re
+from typing import List
 
 
 
@@ -77,53 +78,82 @@ class ProteinDatabaseHandlerNCBI:
 
 
 
+def download_orhodb_dataset(gen_name= "PhaC",output_file="phac.fasta"):
+    odb = OdbAPI()
 
 
+    search_result = odb.search(gen_name)
+
+    with open(output_file, "w") as f:
+        for record in search_result.entries:
+            cluster_id = record.cluster_id.id
+            try:
+
+                fasta_url = f"https://data.orthodb.org/current/fasta?id={cluster_id}"
+                response = requests.get(fasta_url)
+
+                if response.status_code == 200:
+                    f.write(response.text)
+                    f.write("\n")
+                else:
+                    print(f"Warning: Failed to download FASTA for cluster {cluster_id} (HTTP {response.status_code})")
+
+            except Exception as e:
+                print(f"Error processing cluster {cluster_id}: {str(e)}")
+
+def merge_unique_fasta(input_files: List[str],file_path, output_file: str) -> None:
+
+    unique_sequences = set()
+    pattern = re.compile(r'{"pub_og_id":"(\d+at\d+)"')
+
+    with open(output_file, 'w') as out_f:
+        for file in input_files:
+            with open(os.path.join(file_path,file), 'r') as in_f:
+                current_header = None
+                current_sequence = []
+
+                for line in in_f:
+                    line = line.strip()
+                    if line.startswith('>'):
+
+                        if current_header and current_sequence:
+                            seq_id_match = pattern.search(current_header)
+                            seq_id = seq_id_match.group(1) if seq_id_match else current_header
+                            sequence = ''.join(current_sequence)
+
+                            if (seq_id, sequence) not in unique_sequences:
+                                unique_sequences.add((seq_id, sequence))
+                                out_f.write(f"{current_header}\n{sequence}\n")
 
 
-def download_orthodb_fasta(gene_name: str, output_file: str = "orthologs.fasta", output_dir: str = "./fasta_results"):
-    """
-    Uses the official OrthoDB Python package to fetch all orthologs of a gene and save them as a FASTA file.
+                        current_header = line
+                        current_sequence = []
+                    else:
+                        current_sequence.append(line)
 
-    Args:
-        gene_name (str): Name of the gene (e.g., 'PhaC').
-        output_file (str): Filename for the resulting FASTA file.
-        output_dir (str): Directory to store the output file.
-    """
-    os.makedirs(output_dir, exist_ok=True)
-    full_path = os.path.join(output_dir, output_file)
 
-    # Connect to OrthoDB API
-    api = orthodb.OdbAPI()
+                if current_header and current_sequence:
+                    seq_id_match = pattern.search(current_header)
+                    seq_id = seq_id_match.group(1) if seq_id_match else current_header
+                    sequence = ''.join(current_sequence)
 
-    search_results = api.search(gene_name)
-    if not search_results or len(search_results) == 0:
-        raise Exception(f"No ortholog groups found for gene: {gene_name}")
+                    if (seq_id, sequence) not in unique_sequences:
+                        unique_sequences.add((seq_id, sequence))
+                        out_f.write(f"{current_header}\n{sequence}\n")
 
-    fasta_data = ""
+    print(f"merge {len(unique_sequences)} unique sequences in file {output_file}")
 
-    print(f"Found {len(search_results)} ortholog group(s) for gene '{gene_name}'")
 
-    for group in search_results:
-        group_id = group.get("id")
-        if not group_id:
-            continue
+def download_dataset_url(url, output_file):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
 
-        try:
-            # Get protein FASTA for this group
-            fasta = api.fasta(group_id)
-            fasta_data += fasta + "\n"
-            print(f"Group {group_id} added.")
-        except Exception as e:
-            print(f"Error with group {group_id}: {e}")
-
-    if not fasta_data:
-        raise Exception("No FASTA data downloaded.")
-
-    with open(full_path, "w") as f:
-        f.write(fasta_data)
-
-    print(f"All FASTA sequences saved to {full_path}")
+        with open(output_file, "w") as file:
+            file.write(response.text)
+        print(f"File saved: {output_file}")
+    except requests.RequestException as e:
+        print(f"Error: {e}")
 
 
 def get_organism_sequences(hits, threshold=0.01, max_sequences=100, output_file="hmm_search_results.fasta"):

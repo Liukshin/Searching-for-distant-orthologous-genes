@@ -4,7 +4,7 @@ import shutil
 import itertools
 from Alignment import *
 from vizualization import *
-
+#from clustalo import clustalo
 
 
 class Model:
@@ -126,8 +126,106 @@ class Model:
 
 
 
+    #
+    # def sequential_search(self, iterations=5, initial_threshold=800, max_sequences=10, combine_output=True):
+    #     """
+    #     Sequential search, where each successive iteration uses a model,
+    #     created from the results of the previous iteration.
+    #
+    #     Logic:
+    #     1. iteration 1: Search with the initial model (M0) → create M1
+    #     2. iteration 2: Search with M1 → create M2
+    #     3. iteration 3: Search with M2 → create M3.
+    #     ...
+    #     """
+    #     found_sequences = []
+    #     combined_sequences = []
+    #     current_model = self.filename  # start with model (М0)
+    #
+    #
+    #     for i in range(iterations):
+    #         print(f"\n=== Iteration {i + 1}/{iterations} (model: {current_model}) ===")
+    #
+    #         # load model
+    #         self.filename = current_model
+    #         self.create_hmm_profil()
+    #
+    #         # search
+    #         hits = list(itertools.islice(self.hmm_search(), max_sequences * 10))
+    #         new_seqs = []
+    #
+    #         for hit in hits:
+    #             try:
+    #                 seq_id = hit.name.decode()
+    #             except:
+    #                 continue
+    #
+    #             if seq_id in found_sequences:
+    #                 continue
+    #
+    #             seq = str(hit.domains[0].alignment.target_sequence)
+    #             _, prob = self.viterbi(seq)
+    #
+    #             if prob is None:
+    #                 continue
+    #
+    #             current_threshold = initial_threshold * (0.7 ** i)
+    #             if prob >= current_threshold:
+    #                 new_seqs.append((seq_id, seq))
+    #                 found_sequences.append(seq_id)
+    #                 print(f"Find: {seq_id} (p={prob:.2f}, threshold={current_threshold:.2f})")
+    #                 if len(new_seqs) >= max_sequences:
+    #                     break
+    #
+    #         if not new_seqs:
+    #             print("No new sequences found. End the search.")
+    #             break
+    #
+    #
+    #         iter_filename = os.path.join(self.output_folder,f"iter_{i + 1}.fasta")
+    #         with open(iter_filename, "w") as f:
+    #             for seq_id, seq in new_seqs:
+    #                 f.write(f">{seq_id}\n{seq}\n")
+    #
+    #         # alignmetn and create new model for next iteration
+    #         clustalw = ClustalWAlignment(iter_filename)
+    #         aligned_sequences = clustalw.align()
+    #
+    #         aligned_filename = os.path.join(self.output_folder,f"aligned_iter_{i + 1}.fasta")
+    #         with open(aligned_filename, "w") as f:
+    #             for seq_id, seq in aligned_sequences.items():
+    #                 f.write(f">{seq_id}\n{seq}\n")
+    #
+    #         current_model = aligned_filename  # upload model for next iteration
+    #
+    #         if combine_output:
+    #             combined_sequences.extend(new_seqs)
+    #
+    #     # final
+    #     if combine_output and combined_sequences:
+    #         final_filename = os.path.join(self.output_folder,"final_combined.fasta")
+    #         with open(final_filename, "w") as out:
+    #             for seq_id, seq in combined_sequences:
+    #                 out.write(f">{seq_id}\n{seq}\n")
+    #
+    #         # create final model
+    #         clustalw = ClustalWAlignment(final_filename)
+    #         aligned_sequences = clustalw.align()
+    #
+    #         final_aligned = os.path.join(self.output_folder,"aligned_final.fasta")
+    #         with open(final_aligned, "w") as f:
+    #             for seq_id, seq in aligned_sequences.items():
+    #                 f.write(f">{seq_id}\n{seq}\n")
+    #
+    #         self.filename = final_aligned
+    #         self.create_hmm_profil()
+    #         print(f"\n final model: {final_aligned}")
+    #
+    #     print(f"Total unique sequences found: {len(found_sequences)}")
+    #     return found_sequences
 
-    def sequential_search(self, iterations=5, initial_threshold=800, max_sequences=10, combine_output=True):
+    def sequential_search(self, iterations=5, initial_threshold=800, max_sequences=10, combine_output=True,
+                          visualization=True):
         """
         Sequential search, where each successive iteration uses a model,
         created from the results of the previous iteration.
@@ -141,7 +239,7 @@ class Model:
         found_sequences = []
         combined_sequences = []
         current_model = self.filename  # start with model (М0)
-
+        all_hits = {i: [] for i in range(iterations)}
 
         for i in range(iterations):
             print(f"\n=== Iteration {i + 1}/{iterations} (model: {current_model}) ===")
@@ -153,6 +251,7 @@ class Model:
             # search
             hits = list(itertools.islice(self.hmm_search(), max_sequences * 10))
             new_seqs = []
+            iteration_hits = []
 
             for hit in hits:
                 try:
@@ -172,26 +271,28 @@ class Model:
                 current_threshold = initial_threshold * (0.7 ** i)
                 if prob >= current_threshold:
                     new_seqs.append((seq_id, seq))
+                    iteration_hits.append(hit)
                     found_sequences.append(seq_id)
                     print(f"Find: {seq_id} (p={prob:.2f}, threshold={current_threshold:.2f})")
                     if len(new_seqs) >= max_sequences:
                         break
 
+            all_hits[i] = iteration_hits[:max_sequences]
+
             if not new_seqs:
                 print("No new sequences found. End the search.")
                 break
 
-           
-            iter_filename = os.path.join(self.output_folder,f"iter_{i + 1}.fasta")
+            iter_filename = os.path.join(self.output_folder, f"iter_{i + 1}.fasta")
             with open(iter_filename, "w") as f:
                 for seq_id, seq in new_seqs:
                     f.write(f">{seq_id}\n{seq}\n")
 
-            # alignmetn and create new model for next iteration
+            # alignment and create new model for next iteration
             clustalw = ClustalWAlignment(iter_filename)
             aligned_sequences = clustalw.align()
 
-            aligned_filename = os.path.join(self.output_folder,f"aligned_iter_{i + 1}.fasta")
+            aligned_filename = os.path.join(self.output_folder, f"aligned_iter_{i + 1}.fasta")
             with open(aligned_filename, "w") as f:
                 for seq_id, seq in aligned_sequences.items():
                     f.write(f">{seq_id}\n{seq}\n")
@@ -203,7 +304,7 @@ class Model:
 
         # final
         if combine_output and combined_sequences:
-            final_filename = os.path.join(self.output_folder,"final_combined.fasta")
+            final_filename = os.path.join(self.output_folder, "final_combined.fasta")
             with open(final_filename, "w") as out:
                 for seq_id, seq in combined_sequences:
                     out.write(f">{seq_id}\n{seq}\n")
@@ -212,7 +313,7 @@ class Model:
             clustalw = ClustalWAlignment(final_filename)
             aligned_sequences = clustalw.align()
 
-            final_aligned = os.path.join(self.output_folder,"aligned_final.fasta")
+            final_aligned = os.path.join(self.output_folder, "aligned_final.fasta")
             with open(final_aligned, "w") as f:
                 for seq_id, seq in aligned_sequences.items():
                     f.write(f">{seq_id}\n{seq}\n")
@@ -222,16 +323,19 @@ class Model:
             print(f"\n final model: {final_aligned}")
 
         print(f"Total unique sequences found: {len(found_sequences)}")
+
+
+        if visualization:
+            plot_hits(all_hits, output_dir=self.output_folder)
+
         return found_sequences
-
-
 
 
     def iterative_search(self, iterations=5, initial_threshold=800, max_sequences=10, combine_output=True,
                          vizualization=True):
         """
         Simplified iterative search with full model reset between iterations.
-        Фиксированная версия: сохраняет в all_hits только уникальные хиты для каждой итерации.
+        
         """
         original_hmm = self.filename
         found_sequences = []

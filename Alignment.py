@@ -177,6 +177,8 @@ class ClustalWAlignment(MultipleAlignment):
         self.match = match
         self.mismatch = mismatch
         self.gap = gap
+        #kal dorabotka
+        self.original_ids = [seq.id for seq in self.sequences]
 
     def compute_distance_matrix(self):
 
@@ -197,13 +199,29 @@ class ClustalWAlignment(MultipleAlignment):
                 distance_matrix[j, i] = distance
 
         return distance_matrix
+    #kal dorabotka
+    def _create_id_mapping(self):
+
+        self.id_to_safe = {}
+        self.safe_to_id = {}
+
+        for i, seq in enumerate(self.sequences):
+            original_id = seq.id
+            safe_id = f"seq_{i}"
+            self.id_to_safe[original_id] = safe_id
+            self.safe_to_id[safe_id] = original_id
 
 
-    def neighbor_joining(self):
+    def neighbor_joining(self,fyl_tree_viz = False):
         """Builds a phylogenetic tree using the neighbor-joining algorithm"""
 
         distance_matrix = self.compute_distance_matrix()
-        labels = [seq.id for seq in self.sequences]
+        if fyl_tree_viz:
+            labels = [seq.id for seq in self.sequences]
+        else:
+            #kaldorabtka
+            labels = [f"seq_{i}" for i in range(len(self.sequences))]
+        #
 
         # Copy the matrix to avoid modifying the original
         D = np.array(distance_matrix, dtype=float)
@@ -262,32 +280,50 @@ class ClustalWAlignment(MultipleAlignment):
 
         return tree
 
+    # def read_newick(self):
+    #     """Reads and processes the Newick tree string"""
+    #
+    #     newick_str = self.neighbor_joining()
+    #     # replace colons in names with temporary symbol |
+    #     fixed_str = (newick_str
+    #                  .replace("_0:", "_0|")
+    #                  .replace("_1:", "_1|")
+    #                  .replace("_2:", "_2|")
+    #                  .replace("_3:", "_3|")
+    #                  .replace("_4:", "_4|")
+    #                  .replace("_5:", "_5|")
+    #                  .replace("_6:", "_6|")
+    #                  .replace("_7:", "_7|")
+    #                  .replace("_8:", "_8|")
+    #                  .replace("_9:", "_9|"))
+    #
+    #     # Parse the modified tree
+    #     tree = Phylo.read(StringIO(fixed_str), "newick")
+    #
+    #     # restore original names
+    #     for clade in tree.find_clades():
+    #         if clade.name:
+    #             clade.name = clade.name.replace("|", ":")
+    #
+    #     return tree
+
+    # dorabotka
+
     def read_newick(self):
-        """Reads and processes the Newick tree string"""
-
         newick_str = self.neighbor_joining()
-        # replace colons in names with temporary symbol |
-        fixed_str = (newick_str
-                     .replace("_0:", "_0|")
-                     .replace("_1:", "_1|")
-                     .replace("_2:", "_2|")
-                     .replace("_3:", "_3|")
-                     .replace("_4:", "_4|")
-                     .replace("_5:", "_5|")
-                     .replace("_6:", "_6|")
-                     .replace("_7:", "_7|")
-                     .replace("_8:", "_8|")
-                     .replace("_9:", "_9|"))
 
-        # Parse the modified tree
-        tree = Phylo.read(StringIO(fixed_str), "newick")
+        
+        tree = Phylo.read(StringIO(newick_str), "newick")
 
-        # restore original names
-        for clade in tree.find_clades():
-            if clade.name:
-                clade.name = clade.name.replace("|", ":")
+        terminals = list(tree.get_terminals())
+        if len(terminals) != len(self.original_ids):
+            raise ValueError("Number of terminals doesn't match number of sequences")
+
+        for terminal, original_id in zip(terminals, self.original_ids):
+            terminal.name = original_id
 
         return tree
+
 
     def progressive_alignment(self):
         """Progressive alignment with guaranteed equal lengths"""

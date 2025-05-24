@@ -41,9 +41,10 @@ dataset = os.path.join(prot_dir, 'orthodb_phac.fasta')
 
 
 
-test_fasta = os.path.join(prot_dir, 'all_iters_combined.fasta')
-df = create_table(test_fasta,dataset)
+# test_fasta = os.path.join(prot_dir, 'all_iters_combined.fasta')
+# df = create_table(test_fasta,dataset)
+#
+# #update_fasta_from_df(test_fasta,df)
+# handler = ProteinDatabaseHandlerNCBI(None)
+# create_tree(test_fasta)
 
-#update_fasta_from_df(test_fasta,df)
-handler = ProteinDatabaseHandlerNCBI(None)
-create_tree(test_fasta)
