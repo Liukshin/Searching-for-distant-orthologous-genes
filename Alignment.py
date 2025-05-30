@@ -410,7 +410,6 @@ class ClustalWAlignment(MultipleAlignment):
 
 
     def save_alignment_to_fasta(self,alignment_seq, headers=False, output_file="alignment_result.fasta"):
-        """Saves alignment to FASTA file"""
 
         records = []
         for seq_id, aligned_seq in alignment_seq.items():

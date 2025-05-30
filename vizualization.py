@@ -6,6 +6,11 @@ import numpy as np
 import pandas as pd
 from matplotlib.patches import Patch
 from matplotlib.path import Path
+from Bio import SeqIO
+import re
+from collections import defaultdict
+
+
 
 def create_table(file_result, db_file="orthodb_phac.txt",table_name="table_results_phac.csv",output_path="./"):
 
@@ -98,9 +103,22 @@ def create_tree(fasta_file: str, output_newick="tree.nwk", output_image="tree.pn
     # plt.close()
 
 
-    plt.figure(figsize=(18, 14), dpi=400)
+    # plt.figure(figsize=(14, 12), dpi=300)
+    # ax = plt.gca()
+    # Phylo.draw(tree, axes=ax, do_show=False, branch_labels=None)
+    # ax.set_xticks([])
+    # ax.set_yticks([])
+    # plt.savefig(output_image, bbox_inches='tight', pad_inches=0)
+    # plt.show()
+    # plt.close()
+
+
+    plt.figure(figsize=(14, 12), dpi=300)
     ax = plt.gca()
-    Phylo.draw(tree, axes=ax, do_show=False, branch_labels=None)
+    Phylo.draw(tree, axes=ax, do_show=False,
+               branch_labels=lambda c: f"{c.branch_length:.3f}" if c.branch_length else "")
+    ax.set_xlabel("")
+    ax.set_ylabel("")
     ax.set_xticks([])
     ax.set_yticks([])
     plt.savefig(output_image, bbox_inches='tight', pad_inches=0)
@@ -230,14 +248,14 @@ def plot_hits(all_hits, output_dir='data', name_graph = "all_iterations.png"):
             linewidth=1.5,
             markersize=6,
             markeredgewidth=0.5,
-            label=f'Iteration {iteration}',
+            label=f'Iterace {iteration+1}',
             color=colors[iteration]
         )
 
     plt.legend(frameon=True, framealpha=0.8, edgecolor='gray')
-    plt.xlabel("Hit Position", fontsize=12)
-    plt.ylabel("Bit Score", fontsize=12)
-    plt.title("HMMER Hit Scores Across Iterations", fontsize=14)
+    plt.xlabel("Pozice zásahu", fontsize=12)
+    plt.ylabel("Bitové skóre", fontsize=12)
+    plt.title("Skóre zásahů HMMER při různých iteracích", fontsize=14)
 
     for spine in plt.gca().spines.values():
         spine.set_linewidth(0.5)
@@ -248,3 +266,56 @@ def plot_hits(all_hits, output_dir='data', name_graph = "all_iterations.png"):
     plt.show()
 
 
+
+def find_custom_motif(fasta_file, pattern):
+    """
+    Search for a custom motif pattern in a FASTA file.
+
+    Args:
+        fasta_file (str): Path to the FASTA file.
+        pattern (str): Motif pattern (e.g., [GS]-X-C-X-[GA]-G).
+
+    Returns:
+        dict: Statistics with motif positions and counts.
+    """
+    regex_pattern = pattern.replace("X", ".").replace("-", "")
+    regex_pattern = f"(?=({regex_pattern}))"
+
+    records = list(SeqIO.parse(fasta_file, "fasta"))
+
+    stats = {
+        'total_sequences': len(records),
+        'sequences_with_motif': 0,
+        'total_motifs': 0,
+        'motifs_per_seq': defaultdict(int),
+        'positions': defaultdict(list),
+        'organisms': {},
+        'pattern_used': regex_pattern
+    }
+
+    for record in records:
+        seq = str(record.seq)
+        seq_id = record.id
+        # Try to extract organism name from description
+        description_parts = record.description.split(maxsplit=1)
+        organism = description_parts[1] if len(description_parts) > 1 else "Unknown"
+        stats['organisms'][seq_id] = organism
+
+        matches = re.finditer(regex_pattern, seq)
+        count = 0
+        for match in matches:
+            start = match.start() + 1
+            motif = match.group(1)
+            stats['positions'][seq_id].append((start, motif))
+            count += 1
+        if count > 0:
+            stats['sequences_with_motif'] += 1
+            stats['motifs_per_seq'][seq_id] = count
+            stats['total_motifs'] += count
+
+    stats['avg_motifs_per_seq'] = (
+        stats['total_motifs'] / stats['total_sequences']
+        if stats['total_sequences'] > 0 else 0
+    )
+
+    return stats

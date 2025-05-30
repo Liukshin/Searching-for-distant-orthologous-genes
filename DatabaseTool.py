@@ -101,47 +101,84 @@ def download_orhodb_dataset(gen_name= "PhaC",output_file="phac.fasta"):
             except Exception as e:
                 print(f"Error processing cluster {cluster_id}: {str(e)}")
 
-def merge_unique_fasta(input_files: List[str],file_path, output_file: str) -> None:
+# def merge_unique_fasta(input_files: List[str],file_path, output_file: str) -> None:
+#
+#     unique_sequences = set()
+#     pattern = re.compile(r'{"pub_og_id":"(\d+at\d+)"')
+#
+#     with open(output_file, 'w') as out_f:
+#         for file in input_files:
+#             with open(os.path.join(file_path,file), 'r') as in_f:
+#                 current_header = None
+#                 current_sequence = []
+#
+#                 for line in in_f:
+#                     line = line.strip()
+#                     if line.startswith('>'):
+#
+#                         if current_header and current_sequence:
+#                             seq_id_match = pattern.search(current_header)
+#                             seq_id = seq_id_match.group(1) if seq_id_match else current_header
+#                             sequence = ''.join(current_sequence)
+#
+#                             if (seq_id, sequence) not in unique_sequences:
+#                                 unique_sequences.add((seq_id, sequence))
+#                                 out_f.write(f"{current_header}\n{sequence}\n")
+#
+#
+#                         current_header = line
+#                         current_sequence = []
+#                     else:
+#                         current_sequence.append(line)
+#
+#
+#                 if current_header and current_sequence:
+#                     seq_id_match = pattern.search(current_header)
+#                     seq_id = seq_id_match.group(1) if seq_id_match else current_header
+#                     sequence = ''.join(current_sequence)
+#
+#                     if (seq_id, sequence) not in unique_sequences:
+#                         unique_sequences.add((seq_id, sequence))
+#                         out_f.write(f"{current_header}\n{sequence}\n")
+#
+#     print(f"merge {len(unique_sequences)} unique sequences in file {output_file}")
 
-    unique_sequences = set()
+
+
+
+
+def merge_unique_fasta(input_files: List[str], file_path: str, output_file: str) -> None:
+    unique = set()
+    records_to_write = []
     pattern = re.compile(r'{"pub_og_id":"(\d+at\d+)"')
 
-    with open(output_file, 'w') as out_f:
-        for file in input_files:
-            with open(os.path.join(file_path,file), 'r') as in_f:
-                current_header = None
-                current_sequence = []
+    for file in input_files:
+        full_path = os.path.join(file_path, file)
+        for record in SeqIO.parse(full_path, "fasta"):
+            header = record.description
+            sequence = str(record.seq)
 
-                for line in in_f:
-                    line = line.strip()
-                    if line.startswith('>'):
+            match = pattern.search(header)
+            seq_id = match.group(1) if match else header
 
-                        if current_header and current_sequence:
-                            seq_id_match = pattern.search(current_header)
-                            seq_id = seq_id_match.group(1) if seq_id_match else current_header
-                            sequence = ''.join(current_sequence)
+            key = (seq_id, sequence)
+            if key not in unique:
+                unique.add(key)
 
-                            if (seq_id, sequence) not in unique_sequences:
-                                unique_sequences.add((seq_id, sequence))
-                                out_f.write(f"{current_header}\n{sequence}\n")
-
-
-                        current_header = line
-                        current_sequence = []
-                    else:
-                        current_sequence.append(line)
+                new_record = SeqRecord(
+                    record.seq,
+                    id=record.id,
+                    description=record.description
+                )
+                records_to_write.append(new_record)
 
 
-                if current_header and current_sequence:
-                    seq_id_match = pattern.search(current_header)
-                    seq_id = seq_id_match.group(1) if seq_id_match else current_header
-                    sequence = ''.join(current_sequence)
+    with open(output_file, "w") as out_f:
+        for record in records_to_write:
+            SeqIO.write(record, out_f, "fasta")
+            out_f.write("\n")
 
-                    if (seq_id, sequence) not in unique_sequences:
-                        unique_sequences.add((seq_id, sequence))
-                        out_f.write(f"{current_header}\n{sequence}\n")
-
-    print(f"merge {len(unique_sequences)} unique sequences in file {output_file}")
+    print(f"Merged {len(records_to_write)} unique sequences into: {output_file}")
 
 
 def download_dataset_url(url, output_file):
