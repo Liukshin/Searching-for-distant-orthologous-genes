@@ -188,7 +188,6 @@ def clusters_tree(newick_str, fasta_file, output_image="colored_clusters.png", p
     tree = Phylo.read(StringIO(newick_str), "newick")
 
     id_to_description = {}
-    #fasta_name = os.path.join(path, fasta_file)
 
     for record in SeqIO.parse(fasta_file, "fasta"):
         seq_id = record.id.split(":")[0]

@@ -249,38 +249,7 @@ def filter_dataset(input_fasta = 'orthodb123.fasta', output_fasta = 'filtered_or
 
 
 
-# def get_organism_sequences(hits, threshold=0.01, max_sequences=100, output_file="hmm_search_results.fasta"):
-#     hit_sequences = []
-#     unique_names = set()
-#     organism_names = []
-#     sequence_count = 0
-#
-#     for hit in hits:
-#         if sequence_count >= max_sequences or hit.evalue > threshold:
-#             break
-#
-#         hit_description = json.loads(hit.description.decode())
-#         organism_name = hit_description.get("organism_name", "Unknown organism")
-#         hit_name = hit.name.decode()
-#
-#         if hit_name not in unique_names:
-#             unique_names.add(hit_name)
-#             organism_names.append(organism_name)
-#
-#             for domain in hit.domains:
-#                 seq_record = SeqRecord(
-#                     Seq(str(domain.alignment.target_sequence)),
-#                     id=hit_name,
-#                     description=f"{organism_name} | evalue={hit.evalue:.2g}"
-#                 )
-#                 hit_sequences.append(seq_record)
-#                 sequence_count += 1
-#                 break
-#
-#     if output_file:
-#         SeqIO.write(hit_sequences, output_file, "fasta")
-#
-#     return hit_sequences
+
 
 
 
