@@ -63,7 +63,8 @@ found_seqs = model.sequential_search(
     combine_output=True
 )
 ```
-##Step 3: Visualize Results
+## Step 4: Visualize Results
+
 ```python
 create_tree(output_file=os.path.join(prot_dir, "file.fasta"))
 ```
