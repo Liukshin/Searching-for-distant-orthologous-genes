@@ -45,6 +45,7 @@ handler.download_protein(output_dir="data/", file_name="file.fasta")
 ## Step 2: Alignment
 
 ```python
+from Alignment import ClustalWAlignment
 alignment = ClustalWAlignment(file_name="file.fasta")
 aligned_result = alignment.align()
 alignment.save_alignment_to_fasta(aligned_result, output_file=os.path.join(prot_dir, "alignedfile.fasta"))
@@ -66,6 +67,7 @@ found_seqs = model.sequential_search(
 ## Step 4: Visualize Results
 
 ```python
+from visualization import create_tree
 create_tree(output_file=os.path.join(prot_dir, "file.fasta"))
 ```
 ## License
