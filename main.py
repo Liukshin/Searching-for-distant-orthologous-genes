@@ -33,8 +33,6 @@ def create_dataset():
     filter_dataset(input_fasta, output_fasta)
 
 def glob_alig():
-    # alig = Protein_alignment(output_dir=prot_dir)
-    # alig.GlobalAlignment(file_name='phac_cupr', list_match=[2, 1, -1])
     fasta_file_phac = os.path.join(prot_dir, 'phac_cupr.fasta')
     seqs = list(SeqIO.parse(fasta_file_phac, 'fasta'))
     alignment = GlobalAlignment(seqs[0],seqs[1],match=2,mismatch=-1,gap= -2)
