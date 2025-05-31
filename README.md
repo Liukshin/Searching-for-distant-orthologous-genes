@@ -18,7 +18,7 @@ Key features:
 ### Dependencies
 Install core packages via pip:
 ```bash
-pip install biopython numpy requests pandas scipy matplotlib
+pip install biopython numpy requests pandas scipy matplotlib phytreeviz
 ```
 # Special Cases
 ## OrthoDB_py
