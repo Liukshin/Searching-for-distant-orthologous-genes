@@ -10,17 +10,43 @@ import json
 from orthodb import OdbAPI
 import re
 from typing import List
-
-
+#from pandas.core.interchange.dataframe_protocol import DataFrame
 
 
 class ProteinDatabaseHandlerNCBI:
+    """
+        Class created for API requeries in NCBI protein (or others) and downloading the required sequences
+
+        Parameters
+        ----------
+        protein_name : DataFrame
+            Dataframe consisting of columns source and gene
+
+        """
     def __init__(self, protein_name):
         self.protein_name = protein_name
         self.prot_dict = {}
 
 
-    def protein_search(self,email:str,errors = True, database = "protein" ):
+    def protein_search(self,email:str,errors = True, database = "protein" )->dict:
+        """
+            Search for a protein sequence in the NCBI database.
+
+            Parameters
+            ----------
+            email : str
+                User email required by NCBI Entrez
+            errors : bool
+                If True, raises an exception on failure. Default is True
+            database : str
+                NCBI database to search in. Default is "protein"
+
+            Returns
+            -------
+            dict
+                Dictionary containing search results
+        """
+
         Entrez.email = email
         info_dict = self.prot_dict
         protein = self.protein_name
@@ -40,24 +66,20 @@ class ProteinDatabaseHandlerNCBI:
             print(protein['Source'][i] + ' ' + protein['Gene'][i] + f'{record}')
         return info_dict
 
-    def get_names(self,email:str, ids: list):
-        Entrez.email = email
-        id_to_name = {}
-
-        for pid in ids:
-            try:
-                handle = Entrez.efetch(db="protein", id=pid, rettype="gb", retmode="text")
-                record = SeqIO.read(handle, "gb")
-                id_to_name[pid] = record.description
-            except Exception as e:
-                print(f"Error getting name for {pid}: {e}")
-                id_to_name[pid] = pid  # fallback
-
-        return id_to_name
-
 
 
     def download_protein(self,output_dir: str,file_name: str):
+        """
+            Download a protein sequence in FASTA format from NCBI.
+
+            Parameters
+            ----------
+            output_dir : str
+                Directory where the file will be saved.
+            file_name : str
+                Name of the output FASTA file.
+        """
+
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
@@ -79,6 +101,17 @@ class ProteinDatabaseHandlerNCBI:
 
 
 def download_orhodb_dataset(gen_name= "PhaC",output_file="phac.fasta"):
+    """
+        Download protein sequences from OrthoDB by gene name.
+
+        Parameters
+        ----------
+        gen_name : str
+            Target gene name to search for
+        output_file : str
+            Name of the output FASTA file
+    """
+
     odb = OdbAPI()
 
 
@@ -101,53 +134,22 @@ def download_orhodb_dataset(gen_name= "PhaC",output_file="phac.fasta"):
             except Exception as e:
                 print(f"Error processing cluster {cluster_id}: {str(e)}")
 
-# def merge_unique_fasta(input_files: List[str],file_path, output_file: str) -> None:
-#
-#     unique_sequences = set()
-#     pattern = re.compile(r'{"pub_og_id":"(\d+at\d+)"')
-#
-#     with open(output_file, 'w') as out_f:
-#         for file in input_files:
-#             with open(os.path.join(file_path,file), 'r') as in_f:
-#                 current_header = None
-#                 current_sequence = []
-#
-#                 for line in in_f:
-#                     line = line.strip()
-#                     if line.startswith('>'):
-#
-#                         if current_header and current_sequence:
-#                             seq_id_match = pattern.search(current_header)
-#                             seq_id = seq_id_match.group(1) if seq_id_match else current_header
-#                             sequence = ''.join(current_sequence)
-#
-#                             if (seq_id, sequence) not in unique_sequences:
-#                                 unique_sequences.add((seq_id, sequence))
-#                                 out_f.write(f"{current_header}\n{sequence}\n")
-#
-#
-#                         current_header = line
-#                         current_sequence = []
-#                     else:
-#                         current_sequence.append(line)
-#
-#
-#                 if current_header and current_sequence:
-#                     seq_id_match = pattern.search(current_header)
-#                     seq_id = seq_id_match.group(1) if seq_id_match else current_header
-#                     sequence = ''.join(current_sequence)
-#
-#                     if (seq_id, sequence) not in unique_sequences:
-#                         unique_sequences.add((seq_id, sequence))
-#                         out_f.write(f"{current_header}\n{sequence}\n")
-#
-#     print(f"merge {len(unique_sequences)} unique sequences in file {output_file}")
-
-
-
 
 
 def merge_unique_fasta(input_files: List[str], file_path: str, output_file: str) -> None:
+    """
+        Merge multiple FASTA files into one, keeping only unique sequences.
+
+        Parameters
+        ----------
+        input_files : List[str]
+            List of input FASTA file paths.
+        file_path : str
+            Directory where the output file will be saved.
+        output_file : str
+            Name of the resulting merged FASTA file.
+    """
+
     unique = set()
     records_to_write = []
     pattern = re.compile(r'{"pub_og_id":"(\d+at\d+)"')
@@ -182,6 +184,17 @@ def merge_unique_fasta(input_files: List[str], file_path: str, output_file: str)
 
 
 def download_dataset_url(url, output_file):
+    """
+        Download a dataset from a given URL and save it to a file.
+
+        Parameters
+        ----------
+        url : str
+            URL of the dataset to download.
+        output_file : str
+            Path to save the downloaded file.
+    """
+
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -193,38 +206,81 @@ def download_dataset_url(url, output_file):
         print(f"Error: {e}")
 
 
-def get_organism_sequences(hits, threshold=0.01, max_sequences=100, output_file="hmm_search_results.fasta"):
-    hit_sequences = []
-    unique_names = set()
-    organism_names = []
-    sequence_count = 0
+def filter_dataset(input_fasta = 'orthodb123.fasta', output_fasta = 'filtered_orthodb123.fasta'):
+    """
+        Filter protein sequences from a FASTA file by specific criteria and save the result.
 
-    for hit in hits:
-        if sequence_count >= max_sequences or hit.evalue > threshold:
-            break
+        Parameters
+        ----------
+        input_fasta : str, optional
+            Path to the input FASTA file (default is 'orthodb123.fasta').
+        output_fasta : str, optional
+            Path to the output filtered FASTA file (default is 'filtered_orthodb123.fasta').
+    """
 
-        hit_description = json.loads(hit.description.decode())
-        organism_name = hit_description.get("organism_name", "Unknown organism")
-        hit_name = hit.name.decode()
+    unique_organisms = {}
+    input_count = 0
 
-        if hit_name not in unique_names:
-            unique_names.add(hit_name)
-            organism_names.append(organism_name)
+    with open(input_fasta, "r") as in_handle:
+        for record in SeqIO.parse(in_handle, "fasta"):
+            input_count += 1
+            header = record.description
+            organism = None
+            if '"organism_name":"' in header:
+                try:
+                    organism = header.split('"organism_name":"')[1].split('"')[0]
+                except IndexError:
+                    continue
 
-            for domain in hit.domains:
-                seq_record = SeqRecord(
-                    Seq(str(domain.alignment.target_sequence)),
-                    id=hit_name,
-                    description=f"{organism_name} | evalue={hit.evalue:.2g}"
-                )
-                hit_sequences.append(seq_record)
-                sequence_count += 1
-                break
+            if organism and organism not in unique_organisms:
+                unique_organisms[organism] = record
 
-    if output_file:
-        SeqIO.write(hit_sequences, output_file, "fasta")
+    with open(output_fasta, "w") as out_handle:
+        SeqIO.write(unique_organisms.values(), out_handle, "fasta")
 
-    return hit_sequences
+    original_size = os.path.getsize(input_fasta) / (1024 * 1024)
+    filtered_size = os.path.getsize(output_fasta) / (1024 * 1024)
+    filtered_count = len(unique_organisms)
+
+    print(f"seq: {input_count}")
+    print(f"after filt: {filtered_count}")
+    print(f"size: {original_size:.2f} MB")
+    print(f"after filt: {filtered_size:.2f} MB")
+
+
+
+# def get_organism_sequences(hits, threshold=0.01, max_sequences=100, output_file="hmm_search_results.fasta"):
+#     hit_sequences = []
+#     unique_names = set()
+#     organism_names = []
+#     sequence_count = 0
+#
+#     for hit in hits:
+#         if sequence_count >= max_sequences or hit.evalue > threshold:
+#             break
+#
+#         hit_description = json.loads(hit.description.decode())
+#         organism_name = hit_description.get("organism_name", "Unknown organism")
+#         hit_name = hit.name.decode()
+#
+#         if hit_name not in unique_names:
+#             unique_names.add(hit_name)
+#             organism_names.append(organism_name)
+#
+#             for domain in hit.domains:
+#                 seq_record = SeqRecord(
+#                     Seq(str(domain.alignment.target_sequence)),
+#                     id=hit_name,
+#                     description=f"{organism_name} | evalue={hit.evalue:.2g}"
+#                 )
+#                 hit_sequences.append(seq_record)
+#                 sequence_count += 1
+#                 break
+#
+#     if output_file:
+#         SeqIO.write(hit_sequences, output_file, "fasta")
+#
+#     return hit_sequences
 
 
 

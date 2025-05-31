@@ -14,6 +14,7 @@ class Protein_alignment:
     def GlobalAlignment(self,file_name: str,
                          list_match: list):
         """
+        Needleman-Wunsch algorthm
         Aligns only two sequences
 
         Parameters
@@ -101,7 +102,22 @@ class Protein_alignment:
 
 
 class GlobalAlignment:
-    """Needleman-Wunsch alg"""
+    """Needleman-Wunsch algorthm
+
+    Parameters
+    ----------
+    seq1 : str
+        First input sequence
+    seq2 : str
+        Second input sequence
+    match : int
+        Score for a match
+    mismatch : int
+        Penalty for a mismatch
+    gap : int
+        Penalty for a gap
+
+    """
 
     def __init__(self, seq1: str, seq2: str, match: int, mismatch: int, gap: int):
         self.seq1 = seq1
@@ -111,7 +127,9 @@ class GlobalAlignment:
         self.gap = gap
 
     def align(self):
-        """Glob alignment"""
+        """Global alignment
+            Aligns only two sequences
+        """
         seq1, seq2 = self.seq1, self.seq2
         len1, len2 = len(seq1), len(seq2)
         arr_s = np.zeros((len1 + 1, len2 + 1))
@@ -170,7 +188,6 @@ class MultipleAlignment:
 
 
 class ClustalWAlignment(MultipleAlignment):
-    """al ClustalW"""
 
     def __init__(self, file_name: str, match: int = 2, mismatch: int = -1, gap: int = -2):
         super().__init__(file_name)
@@ -199,7 +216,7 @@ class ClustalWAlignment(MultipleAlignment):
                 distance_matrix[j, i] = distance
 
         return distance_matrix
-    #kal dorabotka
+
     def _create_id_mapping(self):
 
         self.id_to_safe = {}
@@ -213,19 +230,25 @@ class ClustalWAlignment(MultipleAlignment):
 
 
     def neighbor_joining(self,fyl_tree_viz = False):
-        """Builds a phylogenetic tree using the neighbor-joining algorithm"""
+        """Builds a phylogenetic tree using the neighbor-joining algorithm
+
+            Parameter
+            ----------
+            fyl_tree_viz : bool
+            responsible for adding original names of sequences (needed when creating a phylogenetic tree in the visualization module)
+
+        """
 
         distance_matrix = self.compute_distance_matrix()
         if fyl_tree_viz:
             labels = [seq.id for seq in self.sequences]
         else:
-            #kaldorabtka
+
             labels = [f"seq_{i}" for i in range(len(self.sequences))]
         #
 
-        # Copy the matrix to avoid modifying the original
         D = np.array(distance_matrix, dtype=float)
-        clusters = {label: label for label in labels}  # Stores subtrees in Newick format
+        clusters = {label: label for label in labels}
 
         while len(labels) > 2:
             n = len(D)
@@ -233,81 +256,53 @@ class ClustalWAlignment(MultipleAlignment):
             # 1. Compute Q matrix
             total_distances = np.sum(D, axis=1)
             Q = (n - 2) * D - total_distances[:, np.newaxis] - total_distances[np.newaxis, :]
-            np.fill_diagonal(Q, np.inf)  # Ignore diagonal
+            np.fill_diagonal(Q, np.inf)
 
-            # 2. Find pair with minimal Q[i][j]
+            #2. Find pair with minimal Q[i][j]
             i, j = np.unravel_index(np.argmin(Q), Q.shape)
             if i == j:  # Safety check
                 continue
 
-            # Ensure i < j to handle removal correctly
+
             if i > j:
                 i, j = j, i
 
-            # 3. Calculate branch lengths for the new node
+            #3 Calculate branch lengths for the new node
             delta = (total_distances[i] - total_distances[j]) / (n - 2)
             limb_i = 0.5 * (D[i, j] + delta)
             limb_j = 0.5 * (D[i, j] - delta)
 
-            # 4. Create new cluster in Newick format
+            #4. Create new cluster in Newick format
             new_cluster = f"({clusters[labels[i]]}:{limb_i:.3f}, {clusters[labels[j]]}:{limb_j:.3f})"
             new_label = f"Cluster_{len(labels)}"
             clusters[new_label] = new_cluster
 
-            # 5. Update the distance matrix
+            #5 Update the distance matrix
             new_distances = 0.5 * (D[i, :] + D[j, :] - D[i, j])
-            new_distances = np.delete(new_distances, [i, j])  # Remove distances for i and j
+            new_distances = np.delete(new_distances, [i, j])
 
-            # Remove rows and columns from D
+
             D = np.delete(D, [j, i], axis=0)
             D = np.delete(D, [j, i], axis=1)
 
-            # Append the new distances to D
+
             D = np.vstack([D, new_distances])
-            new_distances = np.append(new_distances, 0.0)  # Distance to itself is 0
+            new_distances = np.append(new_distances, 0.0)
             D = np.column_stack([D, new_distances])
 
-            # 6. Update labels list
-            labels.pop(j)  # Remove the larger index first
-            labels.pop(i)  # Then the smaller index
-            labels.append(new_label)  # Add the new cluster label
+            #6. Update labels list
+            labels.pop(j)
+            labels.pop(i)
+            labels.append(new_label)
 
         # 7. Connect the last two nodes
         if len(labels) == 2:
             tree = f"({clusters[labels[0]]}:{D[0, 1] / 2:.3f}, {clusters[labels[1]]}:{D[0, 1] / 2:.3f})"
         else:
-            tree = clusters[labels[0]]  # Edge case with only one node left
+            tree = clusters[labels[0]]
 
         return tree
 
-    # def read_newick(self):
-    #     """Reads and processes the Newick tree string"""
-    #
-    #     newick_str = self.neighbor_joining()
-    #     # replace colons in names with temporary symbol |
-    #     fixed_str = (newick_str
-    #                  .replace("_0:", "_0|")
-    #                  .replace("_1:", "_1|")
-    #                  .replace("_2:", "_2|")
-    #                  .replace("_3:", "_3|")
-    #                  .replace("_4:", "_4|")
-    #                  .replace("_5:", "_5|")
-    #                  .replace("_6:", "_6|")
-    #                  .replace("_7:", "_7|")
-    #                  .replace("_8:", "_8|")
-    #                  .replace("_9:", "_9|"))
-    #
-    #     # Parse the modified tree
-    #     tree = Phylo.read(StringIO(fixed_str), "newick")
-    #
-    #     # restore original names
-    #     for clade in tree.find_clades():
-    #         if clade.name:
-    #             clade.name = clade.name.replace("|", ":")
-    #
-    #     return tree
-
-    # dorabotka
 
     def read_newick(self):
         newick_str = self.neighbor_joining()
@@ -364,7 +359,7 @@ class ClustalWAlignment(MultipleAlignment):
                 #5 Apply gaps to all sequences in subtrees
                 def apply_global_gaps(node, gaps):
                     if node.is_terminal():
-                        # Insert gaps into original sequence
+
                         seq_list = list(node.original_seq)
                         for pos in sorted(gaps, reverse=True):
                             seq_list.insert(pos, '-')
@@ -377,7 +372,7 @@ class ClustalWAlignment(MultipleAlignment):
                 apply_global_gaps(right, [i for i, char in enumerate(aligned_right) if char == '-'])
 
                 # 6. Store the merged alignment
-                clade.aligned_seq = aligned_left  # or consensus
+                clade.aligned_seq = aligned_left
 
         # 7 compile final alignment
         msa = {}
@@ -388,7 +383,7 @@ class ClustalWAlignment(MultipleAlignment):
         lengths = {k: len(v) for k, v in msa.items()}
         if len(set(lengths.values())) != 1:
 
-            # force alignment to max length
+
             max_len = max(lengths.values())
             for name in msa:
                 msa[name] = msa[name].ljust(max_len, '-')

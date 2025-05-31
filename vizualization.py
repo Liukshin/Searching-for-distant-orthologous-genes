@@ -1,18 +1,38 @@
-import matplotlib.pyplot as plt
-import os
+from pandas import DataFrame
 from DatabaseTool import *
 from Alignment import *
-import numpy as np
 import pandas as pd
-from matplotlib.patches import Patch
-from matplotlib.path import Path
-from Bio import SeqIO
 import re
 from collections import defaultdict
+from Bio import SeqIO
+from scipy.cluster.hierarchy import linkage, fcluster
+from scipy.spatial.distance import pdist
+from io import StringIO
+from phytreeviz import TreeViz
+from matplotlib import pyplot as plt
+from matplotlib.patches import Patch
+from tempfile import NamedTemporaryFile
+from Bio import Phylo
+import numpy as np
 
 
 
-def create_table(file_result, db_file="orthodb_phac.txt",table_name="table_results_phac.csv",output_path="./"):
+
+def create_table(file_result, db_file:str,table_name: str,output_path: str)->DataFrame:
+    """
+    Save results to csv
+    return DataFrame
+
+    Parameters
+    ----------
+    file_result : str
+        Name of fasta file.
+    db_file : str
+        Name of fasta file.
+    table_name : str
+        Name of csv file.
+    output_path : str
+    """
 
     target_ids = set()
     with open(file_result) as f1:
@@ -40,7 +60,20 @@ def create_table(file_result, db_file="orthodb_phac.txt",table_name="table_resul
 
 
 
-def update_fasta_from_df(fasta_file, df,output_file):
+def update_fasta_from_df(fasta_file:str, df:DataFrame,output_file:str):
+    """
+    Overwrites fasta file with organism names
+
+    Parameters
+    ----------
+    fasta_file : str
+        Name of fasta file.
+    df : DataFrame
+        DataFrame containing organism names.
+    output_file : str
+        Name of fasta file.
+
+    """
 
     updated_records = []
     with open(fasta_file, "r") as f:
@@ -69,6 +102,20 @@ def update_fasta_from_df(fasta_file, df,output_file):
 
 
 def create_tree(fasta_file: str, output_newick="tree.nwk", output_image="tree.png", output_dir='data'):
+    """
+    Simple visualization of a phylogenetic tree
+
+    Parameters
+    ----------
+    fasta_file : str
+        Name of fasta file.
+    output_newick : str
+        Newick file
+    output_image : str
+        Name of .png file.
+    output_dir : str
+        Name of directory file
+    """
 
     alignment = ClustalWAlignment(fasta_file)
     newick_str = alignment.neighbor_joining(fyl_tree_viz=True)
@@ -97,22 +144,6 @@ def create_tree(fasta_file: str, output_newick="tree.nwk", output_image="tree.pn
             clade.name = descriptions[seq_id]
 
 
-    # fig = plt.figure(figsize=(10, 10), dpi=300)
-    # Phylo.draw(tree, do_show=False)
-    # plt.savefig(output_image, bbox_inches='tight')
-    # plt.close()
-
-
-    # plt.figure(figsize=(14, 12), dpi=300)
-    # ax = plt.gca()
-    # Phylo.draw(tree, axes=ax, do_show=False, branch_labels=None)
-    # ax.set_xticks([])
-    # ax.set_yticks([])
-    # plt.savefig(output_image, bbox_inches='tight', pad_inches=0)
-    # plt.show()
-    # plt.close()
-
-
     plt.figure(figsize=(14, 12), dpi=300)
     ax = plt.gca()
     Phylo.draw(tree, axes=ax, do_show=False,
@@ -129,108 +160,103 @@ def create_tree(fasta_file: str, output_newick="tree.nwk", output_image="tree.pn
     print(f"Image saved in: {output_image}")
 
 
-# def create_tree(
-#         fasta_file: str,
-#         output_newick="tree.nwk",
-#         output_image="tree.png",
-#         output_dir='data',
-#         groups=None,
-#         colors=None,
-#         link_groups=None
-#     ):
-#
-#     alignment = ClustalWAlignment(fasta_file)
-#     newick_str = alignment.neighbor_joining()
-#
-#     output_newick = os.path.join(output_dir, output_newick)
-#     output_image = os.path.join(output_dir, output_image)
-#
-#     with open(output_newick, "w") as f:
-#         f.write(newick_str)
-#
-#     tree = Phylo.read(StringIO(newick_str), "newick")
-#
-#
-#     descriptions = {}
-#     with open(fasta_file, "r") as f:
-#         for record in SeqIO.parse(f, "fasta"):
-#             record_id = record.id.split(":")[0]
-#             descriptions[record_id] = record.description
-#
-#     for clade in tree.get_terminals():
-#         seq_id = clade.name.split(":")[0]
-#         if seq_id in descriptions:
-#             clade.name = descriptions[seq_id]
-#
-#     if groups and colors:
-#         for clade in tree.get_terminals():
-#             full_name = clade.name
-#
-#
-#             for group_name, members in groups.items():
-#                 if any(member in full_name for member in members):
-#                     color = colors.get(group_name)
-#
-#                     for node in tree.get_path(clade):
-#                         if not hasattr(node, 'color'):
-#                             node.color = color
-#                     break
-#
-#
-#     fig = plt.figure(figsize=(12, 10), dpi=300)
-#     ax = fig.add_subplot(111)
-#
-#
-#     Phylo.draw(tree, axes=ax, do_show=False, branch_labels=None)
-#
-#     if groups and colors:
-#         for group_name, members in groups.items():
-#             color = colors.get(group_name, 'gray')
-#             for clade in tree.get_terminals():
-#                 if clade.name.split()[0] in members:
-#
-#                     for node in tree.get_path(clade):
-#                         if hasattr(node, 'color'):
-#                             node.color = color
-#                         else:
-#                             setattr(node, 'color', color)
-#
-#
-#     Phylo.draw(tree, axes=ax, do_show=False, branch_labels=None)
-#
-#     if link_groups and groups:
-#         for group1, group2 in link_groups:
-#
-#             pass
-#
-#
-#     if groups and colors:
-#         legend_patches = [
-#             Patch(label=name, color=color)
-#             for name, color in colors.items()
-#         ]
-#         ax.legend(
-#             handles=legend_patches,
-#             frameon=False,
-#             bbox_to_anchor=(0.3, 0.3),
-#             loc="center",
-#             ncols=2
-#         )
-#
-#     plt.savefig(output_image, bbox_inches='tight')
-#     plt.show()
-#     plt.close()
-#
-#     print(f"Tree saved in: {output_newick}")
-#     print(f"Image saved in: {output_image}")
+def clusters_tree(newick_str, fasta_file, output_image="colored_clusters.png", path='data',
+                  cluster_threshold=0.3):
+    """
+    Colored clusters visualization of a phylogenetic tree
 
+    Parameters
+    ----------
+    newick_str : str
+        Newick file
+    fasta_file : str
+        Name of fasta file
+    output_image : str
+        Name of .png file.
+    path : str
+        Name of directory file
+    cluster_threshold: float
+        Affects the number of clusters
+    Returns
+        -------
+        clusters:dict
+            Dictionary of clusters where:
+            - Keys are cluster identifiers (integers),
+            - Values are lists of sequence labels grouped in that cluster.
+    """
 
+    tree = Phylo.read(StringIO(newick_str), "newick")
+
+    id_to_description = {}
+    #fasta_name = os.path.join(path, fasta_file)
+
+    for record in SeqIO.parse(fasta_file, "fasta"):
+        seq_id = record.id.split(":")[0]
+        id_to_description[seq_id] = record.description
+
+    for clade in tree.get_terminals():
+        seq_id = clade.name.split(":")[0]
+        if seq_id in id_to_description:
+            clade.name = id_to_description[seq_id]
+
+    with NamedTemporaryFile("w+", delete=False, suffix=".nwk", dir=path) as tmp_file:
+        Phylo.write(tree, tmp_file.name, "newick")
+        tree_path = tmp_file.name
+
+    terminals = tree.get_terminals()
+    labels = [clade.name for clade in terminals]
+    distances = np.zeros((len(terminals), len(terminals)))
+    for i, clade1 in enumerate(terminals):
+        for j, clade2 in enumerate(terminals):
+            if i < j:
+                d = tree.distance(clade1, clade2)
+                distances[i, j] = d
+                distances[j, i] = d
+
+    condensed_dist = pdist(distances)
+    linkage_matrix = linkage(condensed_dist, method="average")
+    cluster_ids = fcluster(linkage_matrix, cluster_threshold, criterion='distance')
+
+    clusters = {}
+    for label, cluster_id in zip(labels, cluster_ids):
+        clusters.setdefault(cluster_id, []).append(label)
+
+    cmap = plt.colormaps["tab20"]
+    color_list = [cmap(i) for i in range(len(clusters))]
+
+    tv = TreeViz(tree_path, leaf_label_size=10, height=0.3)
+    tv.show_scale_bar()
+    tv.show_branch_length(color="black")
+
+    legend_handles = []
+    for i, (cluster_id, names) in enumerate(clusters.items()):
+        color = color_list[i]
+        tv.highlight(names, color=color)
+        legend_handles.append(Patch(color=color, label=f"Shluk {cluster_id}"))
+
+    fig = tv.plotfig()
+
+    fig.legend(handles=legend_handles, frameon=False, bbox_to_anchor=(0.4, 0.05), loc="lower center", ncols=3)
+    output_name = os.path.join(path, output_image)
+    fig.savefig(output_name, dpi=600)
+    plt.show()
+    print(f"Saved in : {output_name}")
+    return clusters
 
 
 def plot_hits(all_hits, output_dir='data', name_graph = "all_iterations.png"):
     """
-    Plots the hits from all iterations with different colors.
-    :param all_hits: Dictionary where keys are iteration numbers and values are lists of Hit objects.
+    Plot bit scores of HMMER hits across multiple iterations.
+
+    Parameters
+    ----------
+    all_hits : dict
+        Dictionary with iteration numbers as keys and lists of Hit objects as values.
+    output_dir : str, optional
+        Directory to save the output image (default is 'data').
+    name_graph : str, optional
+        Name of the output .png file (default is 'all_iterations.png').
+
     """
     plt.style.use('seaborn-v0_8')
     plt.figure(figsize=(10, 6), dpi=300)
@@ -269,14 +295,33 @@ def plot_hits(all_hits, output_dir='data', name_graph = "all_iterations.png"):
 
 def find_custom_motif(fasta_file, pattern):
     """
-    Search for a custom motif pattern in a FASTA file.
+    Search for a custom motif in a FASTA file.
 
-    Args:
-        fasta_file (str): Path to the FASTA file.
-        pattern (str): Motif pattern (e.g., [GS]-X-C-X-[GA]-G).
+    Parameters
+    ----------
+    fasta_file : str
+        Name of fasta file.
+    pattern : str
+        Motif pattern (e.g., "[GS]-X-C-X-[GA]-G").
 
-    Returns:
-        dict: Statistics with motif positions and counts.
+    Returns
+    -------
+    stats : dict
+        Dictionary with the following keys:
+            - total_sequences : int
+                Number of sequences in the input file.
+            - sequences_with_motif : int
+                Number of sequences containing the motif.
+            - total_motifs : int
+                Total number of motif occurrences found.
+            - motifs_per_seq : dict
+                Number of motifs found per sequence (seq_id → count).
+            - positions : dict
+                Motif positions per sequence (seq_id → list of positions).
+            - organisms : dict
+                Organism name per sequence (seq_id → name).
+            - pattern_used : str
+                Motif pattern used for the search.
     """
     regex_pattern = pattern.replace("X", ".").replace("-", "")
     regex_pattern = f"(?=({regex_pattern}))"

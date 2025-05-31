@@ -4,6 +4,13 @@ from Alignment import *
 from HMM import *
 import pandas as pd
 from vizualization import *
+from config import (
+    prot_dir,
+    df, df_class_1, df_class_2, df_class_3, df_class_4,
+    dataset123, dataset1, dataset2, dataset3, dataset4
+)
+
+
 
 
 def create_dataset():
@@ -20,10 +27,24 @@ def create_dataset():
     download_dataset_url(orthodb_url,os.path.join(prot_dir, "phac1234.fasta"))
     #one file
     merge_unique_fasta(file_name_list,prot_dir, dataset123)
+    #filtr datset
+    input_fasta = os.path.join(prot_dir, 'orthodb123.fasta')
+    output_fasta = os.path.join(prot_dir, 'filtered_orthodb123.fasta')
+    filter_dataset(input_fasta, output_fasta)
 
 def glob_alig():
-    alig = Protein_alignment(output_dir=prot_dir)
-    alig.GlobalAlignment(file_name='phac_cupr', list_match=[2, 1, -1])
+    # alig = Protein_alignment(output_dir=prot_dir)
+    # alig.GlobalAlignment(file_name='phac_cupr', list_match=[2, 1, -1])
+    fasta_file_phac = os.path.join(prot_dir, 'phac_cupr.fasta')
+    seqs = list(SeqIO.parse(fasta_file_phac, 'fasta'))
+    alignment = GlobalAlignment(seqs[0],seqs[1],match=2,mismatch=-1,gap= -2)
+    sek1,sek2 = alignment.align()
+    record1 = SeqRecord(Seq(sek1), id="seq1")
+    record2 = SeqRecord(Seq(sek2), id="seq2")
+    output_path = os.path.join(prot_dir,"alignedphac_cupr.fasta")
+
+    SeqIO.write([record1, record2], output_path, "fasta")
+
 
 def multi_alig():
     fasta_file_phac = os.path.join(prot_dir, 'phac_cupr.fasta')
@@ -54,99 +75,54 @@ def motiv_search(file='update_phac.fasta',motiv = "[GS]-X-C-X-[GA]-G"):
         organism = stats['organisms'].get(seq_id, "Unknown")
         print(f"{seq_id} ({organism}): {motifs}")
 
-if __name__ == '__main__':
 
-    prot_dir = r'data'
-    os.makedirs(prot_dir, exist_ok=True)
 
-    df_cupr = pd.DataFrame({
-        'Source': ['Cupriavidus necator', 'Caulobacter vibrioides'],
-        'Gene': ['phaC', 'phaC']})
+def main(df_class:DataFrame ,number_pipline:int,multi_alignment= True,threshold = 0.35):
 
-    # df = pd.DataFrame({
-    #     'Source': ['Cupriavidus necator', 'Pseudomonas aeruginosa'],
-    #     'Gene': ['phaC', 'phaC']})
-    data_0iter = {
-        'Source': [
-            'Caulobacter crescentus',
-            'Cupriavidus necator',
-            'Paracoccus denitrificans',
-            'Vibrio cholerae',
-            'Chromobacterium violaceum',
-            'Hyphomonas sp. CACIAM 19H1',
-            'Pseudomonas aeruginosa',
-            'Pseudomonas fluorescens',
-            'Pseudomonas putida',
-            'Haloferax mediterranei',
-            'Haloquadratum walsbyi',
-            'Synechocystis sp. PCC 6803',
-            'Bacillus cereus',
-            'Bacillus megaterium'
-        ],
-        'Gene': [
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC',
-            'PhaC'
-        ]
-    }
-
-    df = pd.DataFrame(data_0iter)
-
-    df_class_1 = df.iloc[0:4].reset_index(drop=True)
-    df_class_2 = df.iloc[4:9].reset_index(drop=True)
-    df_class_3 = df.iloc[9:12].reset_index(drop=True)
-    df_class_4 = df.iloc[12:14].reset_index(drop=True)
-
-    #create_dataset()
-    #dataset123 = os.path.join(prot_dir, 'orthodb123.fasta') #net 3 iter
-    #dataset123 = os.path.join(prot_dir, 'phac1.fasta') #net 3  iter
-    dataset123 = os.path.join(prot_dir, 'phac1234.fasta') #rabotaet 3 iter
-    #vse rabotajet
-    #dataset123 = os.path.join(prot_dir,'orthodb_phac.fasta')
-
-    dataset1 = os.path.join(prot_dir, 'filtered_phac1.fasta')
-    dataset2 = os.path.join(prot_dir, 'filtered_phac2.fasta')
-    dataset3 = os.path.join(prot_dir, 'filtered_phac3.fasta')
-    dataset4 = os.path.join(prot_dir, 'filtered_orthodb123.fasta')
-
-    df_classes = [df_class_1, df_class_2, df_class_3, df_class_4]
-    update_fasta_files = []
-
-    search_prot(df_class_4)
-    #multi_alig()
-    glob_alig()
+    search_prot(df_class)
+    if multi_alignment:
+        multi_alig()
+    else:
+        glob_alig()
     model = Model(filename='phac_cupr', dataset=dataset4, output_folder=prot_dir)
     # model.create_hmm_profil()
     found_seqs = model.sequential_search(iterations=3, max_sequences=10, initial_threshold=100, combine_output=True,
-                                         combine_output_file=f'aligned_final4.fasta')
+                                         combine_output_file=f'aligned_final{number_pipline}.fasta')
 
     # result processing
-    test_fasta = os.path.join(prot_dir, f'aligned_final4.fasta')
-    df_t1 = create_table(test_fasta, dataset4, output_path=prot_dir)
-    updated_fasta = os.path.join(prot_dir, f'update_phac4.fasta')
+    test_fasta = os.path.join(prot_dir, f'aligned_final{number_pipline}.fasta')
+    df_t1 = create_table(file_result=test_fasta, db_file=dataset4, table_name=f"table_results_phac{number_pipline}.csv",
+                         output_path=prot_dir)
+    updated_fasta = os.path.join(prot_dir, f'update_phac{number_pipline}.fasta')
     update_fasta_from_df(test_fasta, df_t1, updated_fasta)
-    create_tree(os.path.join(prot_dir, f'update_phac4.fasta'))
+    # simple tree
+    #create_tree(os.path.join(prot_dir, f'update_phac{number_pipline}.fasta'))
+    motiv_search(file=os.path.join(prot_dir, f'update_phac{number_pipline}.fasta'))
 
-    motiv_search(file=os.path.join(prot_dir, f'update_phac4.fasta'))
+    # colored tree
 
-    update_fasta_files.append(updated_fasta)
+    fasta_file = os.path.join(prot_dir,f"update_phac{number_pipline}.fasta")
+    alignment = ClustalWAlignment(fasta_file)
+    newick_str = alignment.neighbor_joining(fyl_tree_viz=True)
 
-    # combined_output = os.path.join(prot_dir, "final_combined_update_phac.fasta")
-    #
-    # with open(combined_output, "w") as outfile:
-    #     for fasta_file in update_fasta_files:
-    #         for record in SeqIO.parse(fasta_file, "fasta"):
-    #             SeqIO.write(record, outfile, "fasta")
+    clust_dict = clusters_tree(newick_str, fasta_file, output_image=f"colored_clusters{number_pipline}.png", path=prot_dir,
+                               cluster_threshold=threshold)
+    print(clust_dict)
+
+
+
+if __name__ == '__main__':
+    df_classes = [df_class_1, df_class_2, df_class_3, df_class_4]
+
+
+    #PhaC I
+    #main(df_classes[0],number_pipline=1)
+    # #PhaC II
+    # main(df_classes[1],number_pipline=2)
+    # #PhaC III
+    #main(df_classes[2],number_pipline=3,multi_alignment=False,threshold = 0.6)
+    # #PhaC IV
+    main(df_classes[3],number_pipline=4,multi_alignment=False)
+
 
 
