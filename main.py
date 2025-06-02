@@ -6,7 +6,7 @@ import pandas as pd
 from vizualization import *
 from config import (
     prot_dir,
-    df, df_class_1, df_class_2, df_class_3, df_class_4,
+    df, df_class_1, df_class_2, df_class_3, df_class_4,df_class_2v2,
     dataset123, dataset1, dataset2, dataset3, dataset4
 )
 
@@ -75,21 +75,28 @@ def motiv_search(file='update_phac.fasta',motiv = "[GS]-X-C-X-[GA]-G"):
 
 
 
-def main(df_class:DataFrame ,number_pipline:int,multi_alignment= True,threshold = 0.35):
+def main(df_class:DataFrame ,number_pipline:int,
+         multi_alignment= True,
+         threshold_search = 100,
+         threshold_viz = 0.35,
+         viz_hit = False,
+         data_set = dataset4):
 
     search_prot(df_class)
     if multi_alignment:
         multi_alig()
     else:
         glob_alig()
-    model = Model(filename='phac_cupr', dataset=dataset4, output_folder=prot_dir)
-    # model.create_hmm_profil()
-    found_seqs = model.sequential_search(iterations=3, max_sequences=10, initial_threshold=100, combine_output=True,
+    model = Model(filename='phac_cupr', dataset=data_set, output_folder=prot_dir)
+
+    found_seqs = model.sequential_search(iterations=3, max_sequences=10, initial_threshold=threshold_search,
+                                         combine_output=True,
+                                         visualization=viz_hit,
                                          combine_output_file=f'aligned_final{number_pipline}.fasta')
 
     # result processing
     test_fasta = os.path.join(prot_dir, f'aligned_final{number_pipline}.fasta')
-    df_t1 = create_table(file_result=test_fasta, db_file=dataset4, table_name=f"table_results_phac{number_pipline}.csv",
+    df_t1 = create_table(file_result=test_fasta, db_file=data_set, table_name=f"table_results_phac{number_pipline}.csv",
                          output_path=prot_dir)
     updated_fasta = os.path.join(prot_dir, f'update_phac{number_pipline}.fasta')
     update_fasta_from_df(test_fasta, df_t1, updated_fasta)
@@ -104,23 +111,25 @@ def main(df_class:DataFrame ,number_pipline:int,multi_alignment= True,threshold 
     newick_str = alignment.neighbor_joining(fyl_tree_viz=True)
 
     clust_dict = clusters_tree(newick_str, fasta_file, output_image=f"colored_clusters{number_pipline}.png", path=prot_dir,
-                               cluster_threshold=threshold)
+                               cluster_threshold=threshold_viz)
     print(clust_dict)
 
 
 
 if __name__ == '__main__':
+    create_dataset()
     df_classes = [df_class_1, df_class_2, df_class_3, df_class_4]
 
 
     #PhaC I
-    #main(df_classes[0],number_pipline=1)
+    main(df_classes[0],number_pipline=1,viz_hit=True)
     # #PhaC II
-    # main(df_classes[1],number_pipline=2)
+    # main(df_classes[1],number_pipline=2,threshold_search=800,data_set=dataset2)
+    # #PhaC II v2
+    # main(df_class_2v2,number_pipline=2,threshold_search=800,data_set=dataset2)
     # #PhaC III
-    #main(df_classes[2],number_pipline=3,multi_alignment=False,threshold = 0.6)
+    # main(df_classes[2],number_pipline=3,multi_alignment=False,threshold = 0.6,viz_hit=True,data_set=dataset3)
     # #PhaC IV
-    main(df_classes[3],number_pipline=4,multi_alignment=False)
-
+    # main(df_classes[3],number_pipline=4,multi_alignment=False)
 
 

@@ -43,6 +43,7 @@ df = pd.DataFrame(data_0iter)
 
 df_class_1 = df.iloc[0:4].reset_index(drop=True)
 df_class_2 = df.iloc[4:9].reset_index(drop=True)
+df_class_2v2 = df.iloc[4:8].reset_index(drop=True)
 df_class_3 = df.iloc[10:12].reset_index(drop=True)
 df_class_4 = df.iloc[12:14].reset_index(drop=True)
 

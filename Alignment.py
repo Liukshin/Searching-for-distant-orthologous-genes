@@ -124,7 +124,7 @@ class ClustalWAlignment(MultipleAlignment):
 
         return distance_matrix
 
-    def _create_id_mapping(self):
+    def create_id_mapping(self):
 
         self.id_to_safe = {}
         self.safe_to_id = {}

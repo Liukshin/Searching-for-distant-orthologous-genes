@@ -4,7 +4,9 @@ import shutil
 import itertools
 from Alignment import *
 from vizualization import *
-#from clustalo import clustalo
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio import SeqIO
 
 
 class Model:
@@ -214,18 +216,19 @@ class Model:
                 break
 
             iter_filename = os.path.join(self.output_folder, f"iter_{i + 1}.fasta")
+            iter_records = [SeqRecord(Seq(seq), id=seq_id, description="") for seq_id, seq in new_seqs]
             with open(iter_filename, "w") as f:
-                for seq_id, seq in new_seqs:
-                    f.write(f">{seq_id}\n{seq}\n")
+                SeqIO.write(iter_records, f, "fasta")
 
             # alignment and create new model for next iteration
             clustalw = ClustalWAlignment(iter_filename)
             aligned_sequences = clustalw.align()
 
             aligned_filename = os.path.join(self.output_folder, f"aligned_iter_{i + 1}.fasta")
+            aligned_records = [SeqRecord(Seq(seq), id=seq_id, description="") for seq_id, seq in
+                               aligned_sequences.items()]
             with open(aligned_filename, "w") as f:
-                for seq_id, seq in aligned_sequences.items():
-                    f.write(f">{seq_id}\n{seq}\n")
+                SeqIO.write(aligned_records, f, "fasta")
 
             current_model = aligned_filename
 
@@ -235,18 +238,20 @@ class Model:
         # final
         if combine_output and combined_sequences:
             final_filename = os.path.join(self.output_folder, "final_combined.fasta")
+            final_records = [SeqRecord(Seq(seq), id=seq_id, description="") for seq_id, seq in combined_sequences]
             with open(final_filename, "w") as out:
-                for seq_id, seq in combined_sequences:
-                    out.write(f">{seq_id}\n{seq}\n")
+                SeqIO.write(final_records, out, "fasta")
 
 
             clustalw = ClustalWAlignment(final_filename)
             aligned_sequences = clustalw.align()
 
             final_aligned = os.path.join(self.output_folder, combine_output_file)
+            aligned_final_records = [SeqRecord(Seq(seq), id=seq_id, description="") for seq_id, seq in
+                                     aligned_sequences.items()]
             with open(final_aligned, "w") as f:
-                for seq_id, seq in aligned_sequences.items():
-                    f.write(f">{seq_id}\n{seq}\n")
+                SeqIO.write(aligned_final_records, f, "fasta")
+
 
             self.filename = final_aligned
             self.create_hmm_profil()
