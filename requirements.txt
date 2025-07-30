@@ -9,5 +9,5 @@ scikit-learn>=1.0.0
 phytreeviz>=0.1.0
 
 # Optional dependencies (install separately)
-pyhmmer>=0.10.0  # Linux only, needed for HMM functionality
-orthodb-py       # For OrthoDB access, requires special installation
+# pyhmmer>=0.10.0  # Linux only, needed for HMM functionality
+# orthodb-py       # For OrthoDB access, requires special installation
