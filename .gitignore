@@ -1,0 +1,16 @@
+
+__pycache__/
+*.py[cod]
+*.pyo
+
+*.swp
+*.bak
+*.tmp
+*.log
+
+venv/
+.env/
+
+data/*
+
+!data/.gitkeep
