@@ -7,7 +7,7 @@ matplotlib>=3.4.0
 requests>=2.25.0
 scikit-learn>=1.0.0
 phytreeviz>=0.1.0
+pyhmmer>=0.10.0  # Linux only, needed for HMM functionality
 
 # Optional dependencies (install separately)
-# pyhmmer>=0.10.0  # Linux only, needed for HMM functionality
 # orthodb-py       # For OrthoDB access, requires special installation

@@ -33,7 +33,34 @@ df_classes = [df_class_1, df_class_2, df_class_3, df_class_4]
 #     data_set=dataset4,
 #     output_dir=prot_dir
 # )
-
+#PhaC II
+results = pihmmi.run_pihmmi_pipeline(
+    df_class=df_class_2,
+    number_pipeline=2,
+    email="247034@vutbr.cz",
+    model_name=search_file,
+    iterations=3,
+    max_seq=10,
+    multi_alignment=True,
+    cluster_tree= True,
+    silhouette_analysis = False,
+    data_set=dataset2,
+    output_dir=prot_dir
+)
+#PhaC II v2
+results = pihmmi.run_pihmmi_pipeline(
+    df_class=df_class_2v2,
+    number_pipeline=2,
+    email="247034@vutbr.cz",
+    model_name=search_file,
+    iterations=3,
+    max_seq=10,
+    multi_alignment=True,
+    cluster_tree= True,
+    silhouette_analysis = False,
+    data_set=dataset2,
+    output_dir=prot_dir
+)
 #PhaC III
 
 # results = pihmmi.run_pihmmi_pipeline(
@@ -50,19 +77,19 @@ df_classes = [df_class_1, df_class_2, df_class_3, df_class_4]
 # )
 
 #PhaC IV
-results = pihmmi.run_pihmmi_pipeline(
-    df_class=df_class_4,
-    number_pipeline=4,
-    email="247034@vutbr.cz",
-    model_name=search_file,
-    iterations=5,
-    max_seq=7,
-    multi_alignment=False,
-    cluster_tree= True,
-    silhouette_analysis = True,
-    data_set=dataset4,
-    output_dir=prot_dir
-)
+# results = pihmmi.run_pihmmi_pipeline(
+#     df_class=df_class_4,
+#     number_pipeline=4,
+#     email="247034@vutbr.cz",
+#     model_name=search_file,
+#     iterations=5,
+#     max_seq=7,
+#     multi_alignment=False,
+#     cluster_tree= True,
+#     silhouette_analysis = True,
+#     data_set=dataset4,
+#     output_dir=prot_dir
+# )
 
 
 

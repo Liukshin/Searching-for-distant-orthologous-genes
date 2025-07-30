@@ -35,10 +35,8 @@ setup(
     python_requires=">=3.9",
     install_requires=read_requirements(),
     extras_require={
-        "hmm": ["pyhmmer>=0.10.0"],
-        "orthodb": ["OrthoDB_py @ git+https://gitlab.com/ezlab/orthodb_py.git"],
-        "all": ["pyhmmer>=0.10.0",
-                "OrthoDB_py @ git+https://gitlab.com/ezlab/orthodb_py.git"],
+        "orthodb": ["orthodb @ git+https://gitlab.com/ezlab/orthodb_py.git"],
+        "all": ["orthodb @ git+https://gitlab.com/ezlab/orthodb_py.git"],
         "dev": [
             "pytest>=6.0",
             "pytest-cov",
