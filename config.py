@@ -48,8 +48,8 @@ df_class_3 = df.iloc[10:12].reset_index(drop=True)
 df_class_4 = df.iloc[12:14].reset_index(drop=True)
 
 
-
-dataset123 = os.path.join(prot_dir, 'phac1234.fasta')  #
+dataset123 = 'orthodb123.fasta'
+# dataset123 = os.path.join(prot_dir, 'phac1234.fasta')  #
 # dataset123 = os.path.join(prot_dir, 'orthodb_phac.fasta')  #
 
 dataset1 = os.path.join(prot_dir, 'filtered_phac1.fasta')
@@ -57,4 +57,15 @@ dataset2 = os.path.join(prot_dir, 'filtered_phac2.fasta')
 dataset3 = os.path.join(prot_dir, 'filtered_phac3.fasta')
 dataset4 = os.path.join(prot_dir, 'filtered_orthodb123.fasta')
 
+
+gen_name_phac = ["PhaC class I", "PhaC class II", "PhaC class III"]
+file_name_phac = ["phac1.fasta", "phac2.fasta", "phac3.fasta", "phac4.fasta"]
+
+uniport_url_phac4 = "https://rest.uniprot.org/uniprotkb/stream?format=fasta&query=%28PhaC+class+IV%29"
+orthodb_url_phac4 ="https://data.orthodb.org/current/fasta?id=122391at1224&seqtype=protein&species="
+
+uniport_url_file_name = "phac4.fasta"
+orthodb_url_file_name = "phac1234.fasta"
+
+search_file = 'phac_cupr.fasta'
 
