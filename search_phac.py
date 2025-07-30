@@ -49,7 +49,7 @@ df_classes = [df_class_1, df_class_2, df_class_3, df_class_4]
 #     output_dir=prot_dir
 # )
 
-#phac
+#PhaC IV
 results = pihmmi.run_pihmmi_pipeline(
     df_class=df_class_4,
     number_pipeline=4,
@@ -65,7 +65,5 @@ results = pihmmi.run_pihmmi_pipeline(
 )
 
 
-print("Pipeline Results:")
-print(f"- Found sequences: {len(results.get('found_sequences', []))}")
-print(f"- Clusters: {len(results.get('clusters', {}))}")
+
 

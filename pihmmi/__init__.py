@@ -26,8 +26,6 @@ from .visualization import (
     find_optimal_threshold_newick
 )
 
-
-# Import main pipelines
 from .pipelines import (
     create_dataset,
     search_protein,
@@ -37,22 +35,7 @@ from .pipelines import (
     run_pihmmi_pipeline
 )
 
-# Conditional HMM import (requires pyhmmer)
-try:
-    from .hmm import Model
-
-    HMM_AVAILABLE = True
-except ImportError:
-    Model = None
-    HMM_AVAILABLE = False
-
-# Check OrthoDB availability
-try:
-    import orthodb
-
-    ORTHODB_AVAILABLE = True
-except ImportError:
-    ORTHODB_AVAILABLE = False
+from .hmm import Model
 
 
 __all__ = [
@@ -77,28 +60,6 @@ __all__ = [
     "plot_hits",
 
     # Information
-    "__version__",
-    "HMM_AVAILABLE",
-    "ORTHODB_AVAILABLE"
+    "__version__"
 ]
 
-
-def check_dependencies():
-    """Check availability of optional dependencies"""
-    deps = {
-        "pyhmmer (for HMM)": HMM_AVAILABLE,
-        "orthodb-py (for OrthoDB)": ORTHODB_AVAILABLE,
-        "core dependencies": True
-    }
-
-    print("Dependency Status:")
-    for dep, available in deps.items():
-        status = "✓" if available else "✗"
-        print(f"  {status} {dep}")
-
-    if not HMM_AVAILABLE:
-        print("\nFor full HMM functionality install: conda install -c bioconda pyhmmer")
-    if not ORTHODB_AVAILABLE:
-        print("For OrthoDB support install: pip install git+https://gitlab.com/ezlab/orthodb_py.git")
-
-    return deps

@@ -1,7 +1,6 @@
 """
 Main pipelines for protein sequence analysis
 """
-
 import os
 import pandas as pd
 from typing import Optional, Dict, Any
@@ -24,7 +23,7 @@ from .visualization import (
     clusters_tree,
     find_optimal_threshold_newick
 )
-#from BW.config import prot_dir, dataset1, dataset2, dataset3, dataset4
+
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
@@ -51,8 +50,7 @@ def create_dataset(output_dir: str = None,
     output_dir : str, optional
         Directory to save files (default uses prot_dir)
     """
-    # if output_dir is None:
-    #     output_dir = prot_dir
+
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -100,87 +98,13 @@ def search_protein(df: DataFrame, email: str = "247034@vut.cz", output_dir: str 
     str
         Path to saved FASTA file
     """
-    # if output_dir is None:
-    #     output_dir = prot_dir
+
 
     handler = ProteinDatabaseHandlerNCBI(df)
     handler.protein_search(email=email)
     handler.download_protein(output_dir=output_dir, file_name=file_name)
 
 
-
-#
-# def global_alignment_pipeline(input_file: str = None, output_dir: str = None):
-#     """
-#     Global pairwise alignment pipeline
-#
-#     Parameters
-#     ----------
-#     input_file : str, optional
-#         Input FASTA file (default phac_cupr.fasta)
-#     output_dir : str, optional
-#         Directory to save results
-#
-#     Returns
-#     -------
-#     str
-#         Path to alignment file
-#     """
-#     if output_dir is None:
-#         output_dir = prot_dir
-#     if input_file is None:
-#         input_file = os.path.join(output_dir, 'phac_cupr.fasta')
-#
-#     seqs = list(SeqIO.parse(input_file, 'fasta'))
-#     if len(seqs) < 2:
-#         raise ValueError("Need at least 2 sequences for alignment")
-#
-#     alignment = GlobalAlignment(str(seqs[0].seq), str(seqs[1].seq), gap=-2)
-#     sek1, sek2 = alignment.align()
-#
-#     record1 = SeqRecord(Seq(sek1), id="seq1")
-#     record2 = SeqRecord(Seq(sek2), id="seq2")
-#     if input_file is None:
-#         output_path = os.path.join(output_dir, "alignedphac_cupr.fasta")
-#     else:
-#         output_path = os.path.join(output_dir, f"aligned{input_file}")
-#
-#     SeqIO.write([record1, record2], output_path, "fasta")
-#     print(f"Global alignment saved: {output_path}")
-
-
-
-# def multiple_alignment_pipeline(input_file: str = None, output_dir: str = None):
-#     """
-#     Multiple sequence alignment pipeline
-#
-#     Parameters
-#     ----------
-#     input_file : str, optional
-#         Input FASTA file
-#     output_dir : str, optional
-#         Directory to save results
-#
-#     Returns
-#     -------
-#     str
-#         Path to alignment file
-#     """
-#     if output_dir is None:
-#         output_dir = prot_dir
-#     if input_file is None:
-#         input_file = os.path.join(output_dir, 'phac_cupr.fasta')
-#
-#     alignment = ClustalWAlignment(file_name=input_file)
-#     aligned_result = alignment.align()
-#
-#     if input_file is None:
-#         output_path = os.path.join(output_dir, "alignedphac_cupr.fasta")
-#     else:
-#         output_path = os.path.join(output_dir, f"aligned{input_file}")
-#     alignment.save_alignment_to_fasta(aligned_result, output_file=output_path)
-#
-#     print(f"Multiple alignment saved: {output_path}")
 
 def global_alignment(name_file:str,name_dir:str):
     fasta_file_phac = os.path.join(name_dir, name_file)
@@ -286,10 +210,6 @@ def run_pihmmi_pipeline(
     Dict[str, Any]
         Analysis results
     """
-    # if output_dir is None:
-    #     output_dir = prot_dir
-    # if data_set is None:
-    #     data_set = dataset4
 
     results = {}
 

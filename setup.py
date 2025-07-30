@@ -1,30 +1,15 @@
 from setuptools import setup, find_packages
 import os
 
-# Read README file
-def read_readme():
-    try:
-        with open("README.md", "r", encoding="utf-8") as fh:
-            return fh.read()
-    except FileNotFoundError:
-        return "PIHMMI - Protein sequence analysis library"
 
-# Read requirements
+def read_readme():
+    with open("README.md", "r", encoding="utf-8") as fh:
+        return fh.read()
+
 def read_requirements():
-    try:
-        with open("requirements.txt", "r", encoding="utf-8") as fh:
-            return [line.strip() for line in fh if line.strip() and not line.startswith("#")]
-    except FileNotFoundError:
-        return [
-            "biopython>=1.79",
-            "numpy>=1.21.0",
-            "pandas>=1.3.0",
-            "scipy>=1.7.0",
-            "matplotlib>=3.4.0",
-            "requests>=2.25.0",
-            "scikit-learn>=1.0.0",
-            "phytreeviz>=0.1.0",
-        ]
+    with open("requirements.txt", "r", encoding="utf-8") as fh:
+        return [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+
 
 setup(
     name="pihmmi",
@@ -50,8 +35,8 @@ setup(
     python_requires=">=3.9",
     install_requires=read_requirements(),
     extras_require={
-        "hmm": ["pyhmmer>=0.10.0"],  # Optional dependency for HMM
-        "orthodb": [],  # Placeholder for OrthoDB (manual installation required)
+        "hmm": ["pyhmmer>=0.10.0"],
+        "orthodb": [],
         "all": ["pyhmmer>=0.10.0"],
         "dev": [
             "pytest>=6.0",
@@ -71,3 +56,4 @@ setup(
         ],
     },
 )
+
