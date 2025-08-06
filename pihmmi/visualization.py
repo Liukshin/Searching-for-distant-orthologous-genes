@@ -22,6 +22,9 @@ from Bio import Phylo
 import numpy as np
 import json
 import os
+from scipy.cluster.hierarchy import linkage, fcluster
+from sklearn.metrics import silhouette_score
+from scipy.spatial.distance import squareform
 
 
 def create_table(file_result, db_file:str,table_name: str,output_path: str)->DataFrame:
@@ -371,12 +374,7 @@ def find_custom_motif(fasta_file, pattern):
     return stats
 
 
-from scipy.cluster.hierarchy import linkage, fcluster
-from sklearn.metrics import silhouette_score
-from Bio import Phylo
-from io import StringIO
-import numpy as np
-from scipy.spatial.distance import squareform
+
 
 def find_optimal_threshold_newick(newick_str, threshold_range=(0.1, 1.0, 0.05)):
     """
@@ -394,19 +392,13 @@ def find_optimal_threshold_newick(newick_str, threshold_range=(0.1, 1.0, 0.05)):
     float
         Optimal threshold value maximizing silhouette score.
     """
-    # Read the Newick string into a tree
-    try:
-        tree = Phylo.read(StringIO(newick_str), "newick")
-    except Exception as e:
-        raise ValueError(f"Invalid Newick string: {e}")
 
-    # Get terminal nodes (leaves)
+    tree = Phylo.read(StringIO(newick_str), "newick")
     terminals = tree.get_terminals()
     n = len(terminals)
     if n < 2:
         raise ValueError("Tree must have at least 2 terminal nodes for clustering")
 
-    # Compute distance matrix
     distances = np.zeros((n, n))
     for i, clade1 in enumerate(terminals):
         for j, clade2 in enumerate(terminals):
@@ -415,13 +407,9 @@ def find_optimal_threshold_newick(newick_str, threshold_range=(0.1, 1.0, 0.05)):
                 distances[i, j] = d
                 distances[j, i] = d
 
-    # Convert square distance matrix to condensed form
     condensed_dist = squareform(distances, checks=False)
 
-    # Compute linkage matrix for hierarchical clustering
     linkage_matrix = linkage(condensed_dist, method="average")
-
-    # Test thresholds to find the optimal one
     min_t, max_t, step = threshold_range
     thresholds = np.arange(min_t, max_t + step, step)
     best_threshold = min_t

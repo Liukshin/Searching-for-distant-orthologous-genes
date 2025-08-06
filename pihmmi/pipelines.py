@@ -222,10 +222,8 @@ def run_pihmmi_pipeline(
     print("=== Sequence Alignment ===")
 
     if multi_alignment:
-        #aligned_file = multiple_alignment_pipeline(model_name, output_dir)
         multiple_alignment(name_dir=output_dir,name_file=model_name)
     else:
-        #aligned_file = global_alignment_pipeline(model_name, output_dir)
         global_alignment(name_dir=output_dir,name_file=model_name)
 
 
